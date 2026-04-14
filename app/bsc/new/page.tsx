@@ -39,7 +39,7 @@ function NewBscForm() {
       });
       if (!res.ok) throw new Error();
       const session = await res.json();
-      router.push(`/bsc/${session.id}?step=objectives`);
+      router.push(`/bsc/${session.id}?step=table`);
     } catch {
       setError(lang === 'ka' ? 'შეცდომა. სცადე თავიდან.' : 'Error. Please try again.');
       setLoading(false);

@@ -21,12 +21,62 @@ export const PERSPECTIVE_DESCRIPTIONS: Record<Perspective, Record<Language, stri
     en: 'Buyers, markets, customer satisfaction',
   },
   internal: {
-    ka: 'ოპერაციები, ლოჯისტიკა, კომპლაიანსი',
+    ka: 'ოპერაციები, ლოგისტიკა, კომპლაიანსი',
     en: 'Operations, logistics, compliance',
   },
   learning: {
     ka: 'გუნდი, ტექნოლოგია, ექსპორტის შესაძლებლობები',
     en: 'Team, technology, export capabilities',
+  },
+};
+
+// Sub-themes within each perspective — shown as hints in the builder
+export const PERSPECTIVE_THEMES: Record<Perspective, Record<Language, { label: string; examples: string }[]>> = {
+  financial: {
+    ka: [
+      { label: 'შემოსავლის ზრდა', examples: 'ახალი ბაზრები, მოცულობა, ახალი პროდუქტები, ახალი კლიენტები' },
+      { label: 'მომგებიანობა', examples: 'მარჟის გაუმჯობესება, ხარჯების შემცირება, ეფექტიანობა' },
+    ],
+    en: [
+      { label: 'Revenue Growth', examples: 'New markets, volume, new products, new customers' },
+      { label: 'Profitability', examples: 'Margin improvement, cost reduction, efficiency' },
+    ],
+  },
+  customer: {
+    ka: [
+      { label: 'ბაზარი და მოზიდვა', examples: 'ახალი გეოგრაფია, მყიდველებთან ურთიერთობა, ბრენდი' },
+      { label: 'ღირებულება და ხარისხი', examples: 'სტანდარტები, სერტიფიკატები, მიწოდების ვადები, სანდოობა' },
+      { label: 'ლოიალობა', examples: 'განმეორებითი შეკვეთები, გრძელვადიანი პარტნიორობა, კმაყოფილება' },
+    ],
+    en: [
+      { label: 'Market & Acquisition', examples: 'New geographies, buyer relationships, brand' },
+      { label: 'Value & Quality', examples: 'Standards, certifications, lead times, reliability' },
+      { label: 'Loyalty', examples: 'Repeat orders, long-term partnerships, satisfaction' },
+    ],
+  },
+  internal: {
+    ka: [
+      { label: 'ოპერაციები', examples: 'წარმოების ეფექტიანობა, ხარისხის კონტროლი, მოცულობა' },
+      { label: 'მიწოდება და კომპლაიანსი', examples: 'ლოგისტიკა, საბაჟო, სერტიფიკაცია, ნორმები' },
+      { label: 'სიჩქარე და ინოვაცია', examples: 'შეკვეთის დამუშავების დრო, ახალი პროდუქტები, ციფრიზაცია' },
+    ],
+    en: [
+      { label: 'Operations', examples: 'Production efficiency, quality control, capacity' },
+      { label: 'Supply Chain & Compliance', examples: 'Logistics, customs, certifications, regulations' },
+      { label: 'Speed & Innovation', examples: 'Order lead time, new products, digitalisation' },
+    ],
+  },
+  learning: {
+    ka: [
+      { label: 'ადამიანები', examples: 'ექსპორტის ცოდნა, ტრენინგი, გუნდის შენარჩუნება, ლიდერობა' },
+      { label: 'სისტემები', examples: 'IT, ავტომატიზაცია, CRM, მონაცემები, ელ-კომერცია' },
+      { label: 'ორგანიზაცია', examples: 'კულტურა, სტრატეგიის გაგება, გუნდური თანამშრომლობა' },
+    ],
+    en: [
+      { label: 'People', examples: 'Export expertise, training, team retention, leadership' },
+      { label: 'Systems', examples: 'IT, automation, CRM, data, e-commerce' },
+      { label: 'Organisation', examples: 'Culture, strategy understanding, cross-team collaboration' },
+    ],
   },
 };
 
