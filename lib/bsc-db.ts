@@ -1,0 +1,224 @@
+import pool from './db';
+import type {
+  BscSession,
+  BscObjective,
+  BscKpi,
+  BscInitiative,
+  StrategyMapLink,
+  FullSession,
+  Language,
+  Perspective,
+  InitiativeStatus,
+} from '@/types/bsc';
+
+// Sessions
+export async function createSession(data: {
+  company_name: string;
+  industry?: string;
+  export_stage?: string;
+  language: Language;
+}): Promise<BscSession> {
+  const res = await pool.query(
+    `INSERT INTO bsc_sessions (company_name, industry, export_stage, language)
+     VALUES ($1, $2, $3, $4) RETURNING *`,
+    [data.company_name, data.industry ?? null, data.export_stage ?? null, data.language]
+  );
+  return res.rows[0];
+}
+
+export async function getSession(id: string): Promise<BscSession | null> {
+  const res = await pool.query('SELECT * FROM bsc_sessions WHERE id = $1', [id]);
+  return res.rows[0] ?? null;
+}
+
+export async function getFullSession(id: string): Promise<FullSession | null> {
+  const session = await getSession(id);
+  if (!session) return null;
+
+  const objRes = await pool.query(
+    'SELECT * FROM bsc_objectives WHERE session_id = $1 ORDER BY perspective, sort_order',
+    [id]
+  );
+  const objectives: BscObjective[] = objRes.rows;
+
+  const objIds = objectives.map((o) => o.id);
+  let kpis: BscKpi[] = [];
+  let initiatives: BscInitiative[] = [];
+
+  if (objIds.length > 0) {
+    const kpiRes = await pool.query(
+      'SELECT * FROM bsc_kpis WHERE objective_id = ANY($1) ORDER BY sort_order',
+      [objIds]
+    );
+    kpis = kpiRes.rows;
+
+    const initRes = await pool.query(
+      'SELECT * FROM bsc_initiatives WHERE objective_id = ANY($1) ORDER BY sort_order',
+      [objIds]
+    );
+    initiatives = initRes.rows;
+  }
+
+  const linksRes = await pool.query(
+    'SELECT * FROM strategy_map_links WHERE session_id = $1',
+    [id]
+  );
+
+  return {
+    ...session,
+    objectives: objectives.map((obj) => ({
+      ...obj,
+      kpis: kpis.filter((k) => k.objective_id === obj.id),
+      initiatives: initiatives.filter((i) => i.objective_id === obj.id),
+    })),
+    strategy_map_links: linksRes.rows,
+  };
+}
+
+// Objectives
+export async function createObjective(data: {
+  session_id: string;
+  perspective: Perspective;
+  title: string;
+  description?: string;
+}): Promise<BscObjective> {
+  const countRes = await pool.query(
+    'SELECT COUNT(*) FROM bsc_objectives WHERE session_id = $1 AND perspective = $2',
+    [data.session_id, data.perspective]
+  );
+  const sort_order = parseInt(countRes.rows[0].count);
+
+  const res = await pool.query(
+    `INSERT INTO bsc_objectives (session_id, perspective, title, description, sort_order)
+     VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+    [data.session_id, data.perspective, data.title, data.description ?? null, sort_order]
+  );
+  return res.rows[0];
+}
+
+export async function updateObjective(
+  id: string,
+  data: { title?: string; description?: string }
+): Promise<BscObjective> {
+  const res = await pool.query(
+    `UPDATE bsc_objectives SET
+       title = COALESCE($2, title),
+       description = COALESCE($3, description)
+     WHERE id = $1 RETURNING *`,
+    [id, data.title ?? null, data.description ?? null]
+  );
+  return res.rows[0];
+}
+
+export async function deleteObjective(id: string): Promise<void> {
+  await pool.query('DELETE FROM bsc_objectives WHERE id = $1', [id]);
+}
+
+// KPIs
+export async function createKpi(data: {
+  objective_id: string;
+  name: string;
+  unit?: string;
+  baseline?: string;
+  target?: string;
+  frequency?: string;
+}): Promise<BscKpi> {
+  const countRes = await pool.query(
+    'SELECT COUNT(*) FROM bsc_kpis WHERE objective_id = $1',
+    [data.objective_id]
+  );
+  const sort_order = parseInt(countRes.rows[0].count);
+
+  const res = await pool.query(
+    `INSERT INTO bsc_kpis (objective_id, name, unit, baseline, target, frequency, sort_order)
+     VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+    [data.objective_id, data.name, data.unit ?? null, data.baseline ?? null,
+     data.target ?? null, data.frequency ?? null, sort_order]
+  );
+  return res.rows[0];
+}
+
+export async function updateKpi(
+  id: string,
+  data: { name?: string; unit?: string; baseline?: string; target?: string; frequency?: string }
+): Promise<BscKpi> {
+  const res = await pool.query(
+    `UPDATE bsc_kpis SET
+       name = COALESCE($2, name),
+       unit = COALESCE($3, unit),
+       baseline = COALESCE($4, baseline),
+       target = COALESCE($5, target),
+       frequency = COALESCE($6, frequency)
+     WHERE id = $1 RETURNING *`,
+    [id, data.name ?? null, data.unit ?? null, data.baseline ?? null,
+     data.target ?? null, data.frequency ?? null]
+  );
+  return res.rows[0];
+}
+
+export async function deleteKpi(id: string): Promise<void> {
+  await pool.query('DELETE FROM bsc_kpis WHERE id = $1', [id]);
+}
+
+// Initiatives
+export async function createInitiative(data: {
+  objective_id: string;
+  name: string;
+  owner?: string;
+  deadline?: string;
+  status?: InitiativeStatus;
+}): Promise<BscInitiative> {
+  const countRes = await pool.query(
+    'SELECT COUNT(*) FROM bsc_initiatives WHERE objective_id = $1',
+    [data.objective_id]
+  );
+  const sort_order = parseInt(countRes.rows[0].count);
+
+  const res = await pool.query(
+    `INSERT INTO bsc_initiatives (objective_id, name, owner, deadline, status, sort_order)
+     VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+    [data.objective_id, data.name, data.owner ?? null,
+     data.deadline ?? null, data.status ?? 'planned', sort_order]
+  );
+  return res.rows[0];
+}
+
+export async function updateInitiative(
+  id: string,
+  data: { name?: string; owner?: string; deadline?: string; status?: InitiativeStatus }
+): Promise<BscInitiative> {
+  const res = await pool.query(
+    `UPDATE bsc_initiatives SET
+       name = COALESCE($2, name),
+       owner = COALESCE($3, owner),
+       deadline = COALESCE($4, deadline),
+       status = COALESCE($5, status)
+     WHERE id = $1 RETURNING *`,
+    [id, data.name ?? null, data.owner ?? null, data.deadline ?? null, data.status ?? null]
+  );
+  return res.rows[0];
+}
+
+export async function deleteInitiative(id: string): Promise<void> {
+  await pool.query('DELETE FROM bsc_initiatives WHERE id = $1', [id]);
+}
+
+// Strategy map links
+export async function createLink(data: {
+  session_id: string;
+  source_objective_id: string;
+  target_objective_id: string;
+}): Promise<StrategyMapLink> {
+  const res = await pool.query(
+    `INSERT INTO strategy_map_links (session_id, source_objective_id, target_objective_id)
+     VALUES ($1, $2, $3)
+     ON CONFLICT (source_objective_id, target_objective_id) DO NOTHING
+     RETURNING *`,
+    [data.session_id, data.source_objective_id, data.target_objective_id]
+  );
+  return res.rows[0];
+}
+
+export async function deleteLink(id: string): Promise<void> {
+  await pool.query('DELETE FROM strategy_map_links WHERE id = $1', [id]);
+}
