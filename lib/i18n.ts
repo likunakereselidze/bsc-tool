@@ -20,7 +20,7 @@ export const t: Record<string, Record<Language, string>> = {
   // Onboarding
   'onboard.title': { ka: 'კომპანიის შესახებ', en: 'About Your Company' },
   'onboard.company_name': { ka: 'კომპანიის სახელი', en: 'Company Name' },
-  'onboard.company_name_placeholder': { ka: 'მაგ. ჩოხატაური Wine LLC', en: 'e.g. Chokhatauri Wine LLC' },
+  'onboard.company_name_placeholder': { ka: 'შეიყვანე კომპანიის სახელი', en: 'Enter your company name' },
   'onboard.industry': { ka: 'ინდუსტრია', en: 'Industry' },
   'onboard.industry_placeholder': { ka: 'მაგ. ღვინო, ჩაი, ტექსტილი', en: 'e.g. Wine, Tea, Textiles' },
   'onboard.export_stage': { ka: 'ექსპორტის ეტაპი', en: 'Export Stage' },
