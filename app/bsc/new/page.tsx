@@ -12,6 +12,8 @@ function NewBscForm() {
   const initialLang: Language = searchParams.get('lang') === 'en' ? 'en' : 'ka';
 
   const [lang, setLang] = useState<Language>(initialLang);
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
   const [companyName, setCompanyName] = useState('');
   const [industry, setIndustry] = useState('');
   const [exportStage, setExportStage] = useState('');
@@ -20,7 +22,7 @@ function NewBscForm() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!companyName.trim()) {
+    if (!fullName.trim() || !email.trim() || !companyName.trim()) {
       setError(tr('error.required', lang));
       return;
     }
@@ -31,6 +33,8 @@ function NewBscForm() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          full_name: fullName.trim(),
+          email: email.trim().toLowerCase(),
           company_name: companyName.trim(),
           industry: industry.trim() || undefined,
           export_stage: exportStage || undefined,
@@ -93,6 +97,41 @@ function NewBscForm() {
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
+            {/* Full name */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                {lang === 'ka' ? 'სახელი და გვარი' : 'Full name'} <span className="text-orange-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                placeholder={lang === 'ka' ? 'მაგ: ნინო მაისურაძე' : 'e.g. John Smith'}
+                className={inputClass}
+                autoComplete="name"
+              />
+            </div>
+
+            {/* Email */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                {lang === 'ka' ? 'ელ-ფოსტა' : 'Email'} <span className="text-orange-500">*</span>
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder={lang === 'ka' ? 'შენი@ელფოსტა.ge' : 'you@example.com'}
+                className={inputClass}
+                autoComplete="email"
+              />
+              <p className="text-xs text-gray-400 mt-1">
+                {lang === 'ka'
+                  ? 'შენი BSC-ის ლინკი ამ მეილზე გამოვაგზავნით.'
+                  : 'We\'ll send your BSC link to this email.'}
+              </p>
+            </div>
+
             {/* Language toggle */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -165,7 +204,7 @@ function NewBscForm() {
 
             <button
               type="submit"
-              disabled={loading || !companyName.trim()}
+              disabled={loading || !fullName.trim() || !email.trim() || !companyName.trim()}
               className="w-full py-3 rounded-full text-sm font-semibold text-white transition-colors disabled:opacity-40"
               style={{ background: '#2563eb' }}
             >

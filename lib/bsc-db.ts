@@ -40,11 +40,14 @@ export async function createSession(data: {
   industry?: string;
   export_stage?: string;
   language: Language;
+  full_name?: string;
+  email?: string;
 }): Promise<BscSession> {
   const res = await pool.query(
-    `INSERT INTO bsc_sessions (company_name, industry, export_stage, language)
-     VALUES ($1, $2, $3, $4) RETURNING *`,
-    [data.company_name, data.industry ?? null, data.export_stage ?? null, data.language]
+    `INSERT INTO bsc_sessions (company_name, industry, export_stage, language, full_name, email)
+     VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+    [data.company_name, data.industry ?? null, data.export_stage ?? null, data.language,
+     data.full_name ?? null, data.email ?? null]
   );
   return res.rows[0];
 }

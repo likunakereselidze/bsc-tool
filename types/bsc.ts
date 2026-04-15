@@ -102,6 +102,9 @@ export interface BscSession {
   export_stage: string | null;
   language: Language;
   paid_tier: boolean;
+  full_name: string | null;
+  email: string | null;
+  ai_generations_used: number;
   created_at: string;
   updated_at: string;
 }
