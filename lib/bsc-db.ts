@@ -108,16 +108,12 @@ export async function createObjective(data: {
   title: string;
   description?: string;
 }): Promise<BscObjective> {
-  const countRes = await pool.query(
-    'SELECT COUNT(*) FROM bsc_objectives WHERE session_id = $1 AND perspective = $2',
-    [data.session_id, data.perspective]
-  );
-  const sort_order = parseInt(countRes.rows[0].count);
-
   const res = await pool.query(
     `INSERT INTO bsc_objectives (session_id, perspective, title, description, sort_order)
-     VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-    [data.session_id, data.perspective, data.title, data.description ?? null, sort_order]
+     VALUES ($1, $2, $3, $4,
+       (SELECT COALESCE(MAX(sort_order), -1) + 1 FROM bsc_objectives WHERE session_id = $1 AND perspective = $2)
+     ) RETURNING *`,
+    [data.session_id, data.perspective, data.title, data.description ?? null]
   );
   return res.rows[0];
 }
@@ -159,17 +155,13 @@ export async function createKpi(data: {
   target?: string;
   frequency?: string;
 }): Promise<BscKpi> {
-  const countRes = await pool.query(
-    'SELECT COUNT(*) FROM bsc_kpis WHERE objective_id = $1',
-    [data.objective_id]
-  );
-  const sort_order = parseInt(countRes.rows[0].count);
-
   const res = await pool.query(
     `INSERT INTO bsc_kpis (objective_id, name, unit, baseline, target, frequency, sort_order)
-     VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+     VALUES ($1, $2, $3, $4, $5, $6,
+       (SELECT COALESCE(MAX(sort_order), -1) + 1 FROM bsc_kpis WHERE objective_id = $1)
+     ) RETURNING *`,
     [data.objective_id, data.name, data.unit ?? null, data.baseline ?? null,
-     data.target ?? null, data.frequency ?? null, sort_order]
+     data.target ?? null, data.frequency ?? null]
   );
   return res.rows[0];
 }
@@ -204,17 +196,13 @@ export async function createInitiative(data: {
   deadline?: string;
   status?: InitiativeStatus;
 }): Promise<BscInitiative> {
-  const countRes = await pool.query(
-    'SELECT COUNT(*) FROM bsc_initiatives WHERE objective_id = $1',
-    [data.objective_id]
-  );
-  const sort_order = parseInt(countRes.rows[0].count);
-
   const res = await pool.query(
     `INSERT INTO bsc_initiatives (objective_id, name, owner, deadline, status, sort_order)
-     VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+     VALUES ($1, $2, $3, $4, $5,
+       (SELECT COALESCE(MAX(sort_order), -1) + 1 FROM bsc_initiatives WHERE objective_id = $1)
+     ) RETURNING *`,
     [data.objective_id, data.name, data.owner ?? null,
-     data.deadline ?? null, data.status ?? 'planned', sort_order]
+     data.deadline ?? null, data.status ?? 'planned']
   );
   return res.rows[0];
 }

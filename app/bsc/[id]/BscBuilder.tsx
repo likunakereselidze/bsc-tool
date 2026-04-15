@@ -1,14 +1,17 @@
 'use client';
 
 import { useState } from 'react';
+import dynamic from 'next/dynamic';
 import { useSearchParams, useRouter } from 'next/navigation';
 import type { FullSession, Perspective, Language } from '@/types/bsc';
-import { PERSPECTIVES, PERSPECTIVE_LABELS, PERSPECTIVE_DESCRIPTIONS } from '@/types/bsc';
+import { PERSPECTIVES, PERSPECTIVE_LABELS, PERSPECTIVE_DESCRIPTIONS, PERSPECTIVE_ACCENT } from '@/types/bsc';
 import { tr } from '@/lib/i18n';
 import BscTable from './BscTable';
-import BscStrategyMap from './BscStrategyMap';
 import BscProgress from './BscProgress';
-import BscExport from './BscExport';
+import ErrorBoundary from './ErrorBoundary';
+
+const BscStrategyMap = dynamic(() => import('./BscStrategyMap'), { ssr: false });
+const BscExport = dynamic(() => import('./BscExport'), { ssr: false });
 
 type Tab = 'setup' | 'table' | 'map' | 'progress' | 'export';
 const TABS: Tab[] = ['setup', 'table', 'map', 'progress', 'export'];
@@ -21,12 +24,6 @@ const TAB_LABELS: Record<Tab, Record<Language, string>> = {
   export:   { ka: 'ექსპორტი',    en: 'Export' },
 };
 
-const PERSPECTIVE_ACCENT: Record<Perspective, string> = {
-  financial: '#2563eb',
-  customer:  '#059669',
-  internal:  '#7c3aed',
-  learning:  '#d97706',
-};
 
 export default function BscBuilder({ initialSession }: { initialSession: FullSession }) {
   const searchParams = useSearchParams();
@@ -75,13 +72,24 @@ export default function BscBuilder({ initialSession }: { initialSession: FullSes
   }
 
   async function generateWithAi() {
+    if (session.objectives.length > 0) {
+      const confirmed = window.confirm(
+        lang === 'ka'
+          ? 'უკვე გაქვს შეყვანილი მონაცემები. AI-ს წინადადება დაემატება ახლა არსებულ შინაარსს. გაგრძელება?'
+          : 'You already have content. AI suggestions will be added on top of existing data. Continue?'
+      );
+      if (!confirmed) return;
+    }
     setAiGenerating(true);
     setAiError(null);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30000);
     try {
       const res = await fetch('/api/ai/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ session_id: session.id }),
+        signal: controller.signal,
       });
       const data = await res.json();
       if (!res.ok) {
@@ -93,9 +101,14 @@ export default function BscBuilder({ initialSession }: { initialSession: FullSes
       } else {
         setAiPreview(data);
       }
-    } catch {
-      setAiError('Network error');
+    } catch (err) {
+      if (err instanceof Error && err.name === 'AbortError') {
+        setAiError(lang === 'ka' ? 'AI-ს მოთხოვნა დრო გადიოდა (30წ)' : 'AI request timed out (30s)');
+      } else {
+        setAiError('Network error');
+      }
     } finally {
+      clearTimeout(timeout);
       setAiGenerating(false);
     }
   }
@@ -432,17 +445,23 @@ export default function BscBuilder({ initialSession }: { initialSession: FullSes
 
         {/* TAB: Strategy Map */}
         {tab === 'map' && (
-          <BscStrategyMap session={session} lang={lang} onRefresh={refreshSession} />
+          <ErrorBoundary>
+            <BscStrategyMap session={session} lang={lang} onRefresh={refreshSession} />
+          </ErrorBoundary>
         )}
 
         {/* TAB: Progress */}
         {tab === 'progress' && (
-          <BscProgress session={session} lang={lang} onRefresh={refreshSession} />
+          <ErrorBoundary>
+            <BscProgress session={session} lang={lang} onRefresh={refreshSession} />
+          </ErrorBoundary>
         )}
 
         {/* TAB: Export */}
         {tab === 'export' && (
-          <BscExport session={session} lang={lang} />
+          <ErrorBoundary>
+            <BscExport session={session} lang={lang} />
+          </ErrorBoundary>
         )}
 
       </main>

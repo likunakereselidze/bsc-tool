@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createSession } from '@/lib/bsc-db';
+import { sendBscWelcomeEmail } from '@/lib/email';
 
 export async function POST(req: NextRequest) {
   try {
@@ -22,10 +23,23 @@ export async function POST(req: NextRequest) {
     const response = NextResponse.json(session, { status: 201 });
     response.cookies.set('bsc_session_id', session.id, {
       httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
       path: '/',
       maxAge: 365 * 24 * 60 * 60,
       sameSite: 'lax',
     });
+
+    // Send welcome email (fire-and-forget — don't block the response)
+    if (session.email && session.full_name) {
+      sendBscWelcomeEmail({
+        to: session.email,
+        fullName: session.full_name,
+        companyName: session.company_name,
+        sessionId: session.id,
+        language: session.language,
+      }).catch((err) => console.error('Email send failed:', err));
+    }
+
     return response;
   } catch (err) {
     console.error('POST /api/sessions', err);

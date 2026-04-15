@@ -2,15 +2,8 @@
 
 import { useState } from 'react';
 import type { FullSession, Perspective, Language, ObjectiveWithDetails, BscKpi, BscInitiative } from '@/types/bsc';
-import { PERSPECTIVES, PERSPECTIVE_LABELS, PERSPECTIVE_DESCRIPTIONS } from '@/types/bsc';
+import { PERSPECTIVES, PERSPECTIVE_LABELS, PERSPECTIVE_DESCRIPTIONS, PERSPECTIVE_ACCENT as ACCENT } from '@/types/bsc';
 import { tr } from '@/lib/i18n';
-
-const ACCENT: Record<Perspective, string> = {
-  financial: '#2563eb',
-  customer: '#059669',
-  internal: '#7c3aed',
-  learning: '#d97706',
-};
 
 type EditState = {
   type: 'objective' | 'kpi' | 'initiative';

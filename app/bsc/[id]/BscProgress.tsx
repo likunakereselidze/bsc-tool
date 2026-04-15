@@ -2,14 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import type { FullSession, Perspective, Language, KpiEntry, BscKpi, ObjectiveWithDetails } from '@/types/bsc';
-import { PERSPECTIVES, PERSPECTIVE_LABELS, PERSPECTIVE_DESCRIPTIONS } from '@/types/bsc';
-
-const ACCENT: Record<Perspective, string> = {
-  financial: '#2563eb',
-  customer:  '#059669',
-  internal:  '#7c3aed',
-  learning:  '#d97706',
-};
+import { PERSPECTIVES, PERSPECTIVE_LABELS, PERSPECTIVE_DESCRIPTIONS, PERSPECTIVE_ACCENT as ACCENT } from '@/types/bsc';
 
 type LoggingState = {
   kpiId: string;

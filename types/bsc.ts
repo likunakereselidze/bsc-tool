@@ -80,6 +80,13 @@ export const PERSPECTIVE_THEMES: Record<Perspective, Record<Language, { label: s
   },
 };
 
+export const PERSPECTIVE_ACCENT: Record<Perspective, string> = {
+  financial: '#2563eb',
+  customer:  '#059669',
+  internal:  '#7c3aed',
+  learning:  '#d97706',
+};
+
 export const EXPORT_STAGES: Record<Language, { value: string; label: string }[]> = {
   ka: [
     { value: 'pre_export', label: 'ექსპორტამდელი' },

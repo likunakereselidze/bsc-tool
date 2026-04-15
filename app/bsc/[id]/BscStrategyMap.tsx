@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import {
   ReactFlow,
   Background,
@@ -17,15 +17,8 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import type { FullSession, Perspective, Language } from '@/types/bsc';
-import { PERSPECTIVES, PERSPECTIVE_LABELS } from '@/types/bsc';
+import { PERSPECTIVES, PERSPECTIVE_LABELS, PERSPECTIVE_ACCENT as ACCENT } from '@/types/bsc';
 import { tr } from '@/lib/i18n';
-
-const ACCENT: Record<Perspective, string> = {
-  financial: '#2563eb',
-  customer:  '#059669',
-  internal:  '#7c3aed',
-  learning:  '#d97706',
-};
 
 // Default row layout: Financial top (end goal), Learning bottom (enabler)
 const PERSPECTIVE_Y: Record<Perspective, number> = {
@@ -115,6 +108,7 @@ export default function BscStrategyMap({
   onRefresh: () => Promise<void>;
 }) {
   const initialized = useRef(false);
+  const dragTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [nodes, setNodes, onNodesChange] = useNodesState(buildNodes(session));
   const [edges, setEdges, onEdgesChange] = useEdgesState(buildEdges(session));
 
@@ -173,12 +167,15 @@ export default function BscStrategyMap({
   );
 
   const onNodeDragStop = useCallback(
-    async (_: React.MouseEvent, node: Node) => {
-      await fetch(`/api/objectives/${node.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ x: node.position.x, y: node.position.y }),
-      });
+    (_: React.MouseEvent, node: Node) => {
+      if (dragTimer.current) clearTimeout(dragTimer.current);
+      dragTimer.current = setTimeout(() => {
+        fetch(`/api/objectives/${node.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ x: node.position.x, y: node.position.y }),
+        });
+      }, 400);
     },
     []
   );

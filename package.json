@@ -10,6 +10,8 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.89.0",
+    "@fontsource/noto-sans": "^5.2.10",
+    "@fontsource/noto-sans-georgian": "^5.2.8",
     "@fontsource/playfair-display": "^5.2.8",
     "@react-pdf/renderer": "^3.4.5",
     "@xyflow/react": "^12.10.2",
@@ -17,6 +19,7 @@
     "pg": "^8.20.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
+    "resend": "^6.11.0",
     "uuid": "^13.0.0"
   },
   "devDependencies": {
