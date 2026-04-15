@@ -13,12 +13,16 @@ import {
 import type { FullSession, Perspective, Language, KpiEntry } from '@/types/bsc';
 import { PERSPECTIVES, PERSPECTIVE_LABELS, PERSPECTIVE_DESCRIPTIONS, PERSPECTIVE_ACCENT as ACCENT_HEX } from '@/types/bsc';
 
-// Register Noto Sans served locally (avoids external dependency at PDF render time)
+// Noto Sans — full-coverage woff2 from Google Fonts CDN (Latin + Georgian + more)
+// BscExport is client-only (ssr: false), so this fetch happens in the browser.
 Font.register({
   family: 'NotoSans',
   fonts: [
-    { src: '/fonts/NotoSans-Regular.ttf' },
-    { src: '/fonts/NotoSans-Bold.ttf', fontWeight: 700 },
+    { src: 'https://fonts.gstatic.com/s/notosans/v36/o-0bIpQlx3QUlC5A4PNjXhFVadyB1Wk.woff2' },
+    {
+      src: 'https://fonts.gstatic.com/s/notosans/v36/o-0IIpQlx3QUlC5A4PNr4AwhQ_y8hn8.woff2',
+      fontWeight: 700,
+    },
   ],
 });
 
