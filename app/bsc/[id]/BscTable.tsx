@@ -4,6 +4,77 @@ import { useState } from 'react';
 import type { FullSession, Perspective, Language, ObjectiveWithDetails, BscKpi, BscInitiative } from '@/types/bsc';
 import { PERSPECTIVES, PERSPECTIVE_LABELS, PERSPECTIVE_DESCRIPTIONS, PERSPECTIVE_ACCENT as ACCENT } from '@/types/bsc';
 import { tr } from '@/lib/i18n';
+import InfoTooltip from './InfoTooltip';
+
+// ── Info tooltip texts ───────────────────────────────────────────────────────
+
+const PERSPECTIVE_INFO: Record<string, Record<string, string>> = {
+  financial: {
+    ka: 'ფინანსური პერსპექტივა გიჩვენებს სად გინდა მიხვიდე ფულის თვალსაზრისით — ექსპორტის შემოსავალი, მოგება, ზრდა. ეს არის საბოლოო შედეგი, რისთვისაც ყველა სხვა ქმედება კეთდება.',
+    en: 'Financial perspective shows where you want to get to in terms of money — export revenue, profit, growth. This is the end result that every other action drives towards.',
+  },
+  customer: {
+    ka: 'კლიენტების პერსპექტივა — ვინ ყიდულობს შენგან და რატომ? ახალი ბაზრები, კლიენტების კმაყოფილება, განმეორებითი შეკვეთები. თუ კლიენტი კმაყოფილია, ფინანსური შედეგიც მოვა.',
+    en: 'Customer perspective — who buys from you and why? New markets, satisfaction, repeat orders. When customers are happy, financial results follow.',
+  },
+  internal: {
+    ka: 'შიდა პროცესები — როგორ მუშაობს შენი კომპანია ყოველდღე? წარმოება, ლოგისტიკა, სერტიფიკაცია, ხარისხის კონტროლი. კარგი პროცესი = კმაყოფილი კლიენტი.',
+    en: 'Internal processes — how does your company operate day to day? Production, logistics, certifications, quality. Good processes lead to satisfied customers.',
+  },
+  learning: {
+    ka: 'სწავლა და ზრდა — რა სჭირდება შენს გუნდს, ცოდნასა და სისტემებს, რომ ყველა სხვა მიზანი მიღწევადი გახდეს? ადამიანები, ტრენინგი, ტექნოლოგია.',
+    en: 'Learning & Capacity — what do your team, knowledge and systems need so that all other objectives become achievable? People, training, technology.',
+  },
+};
+
+const KPI_INFO: Record<string, Record<string, string>> = {
+  name: {
+    ka: 'KPI (Key Performance Indicator) — ეს არის ის, რითაც გაზომავ მიზნის მიღწევას. მაგ: "ექსპორტის შემოსავალი", "ახალი კლიენტების რაოდენობა", "მიწოდების ვადა დღეებში".',
+    en: 'KPI (Key Performance Indicator) — this is how you measure progress toward your objective. e.g. "Export revenue", "Number of new clients", "Delivery lead time in days".',
+  },
+  unit: {
+    ka: 'რა ერთეულით იზომება ეს KPI? მაგ: ლარი, USD, %, კლიენტი, ტონა, დღე. ერთეულის გარეშე რიცხვი ვერაფერს ამბობს.',
+    en: 'What unit is this KPI measured in? e.g. GEL, USD, %, clients, tonnes, days. A number without a unit means nothing.',
+  },
+  baseline: {
+    ka: 'ახლანდელი მდგომარეობა — დღეს ამ KPI-ზე რა მაჩვენებელია? ეს არის შენი საწყისი წერტილი. გულახდილი იყავი — სიმართლე დაგეხმარება.',
+    en: 'Current state — what does this KPI show today? This is your starting point. Be honest — the truth will help you more than flattering numbers.',
+  },
+  target: {
+    ka: 'სამიზნე — 6 თვეში ან წლის ბოლოს სად გინდა იყო ეს KPI? კონკრეტული რიცხვი. არარეალური სამიზნე საშუალებას არ გაძლევს წინაერთ გახვიდე.',
+    en: 'Target — where do you want this KPI to be in 6 months or by year end? A concrete number. An unrealistic target is just as useless as no target.',
+  },
+};
+
+const INITIATIVE_INFO: Record<string, Record<string, string>> = {
+  name: {
+    ka: 'ინიციატივა — კონკრეტული ქმედება, რომელსაც KPI-ის სამიზნის მისაღწევად გადადგამ. მაგ: "გერმანიის გამოფენაზე მონაწილეობა", "ISO 22000 სერტიფიკატის განაცხადი".',
+    en: 'Initiative — a specific action you will take to reach the KPI target. e.g. "Exhibit at German food fair", "Apply for ISO 22000 certification".',
+  },
+  owner: {
+    ka: 'პასუხისმგებელი — ვინ კონკრეტულად ასრულებს ამ ინიციატივას? სახელი ან თანამდებობა. თუ ყველა პასუხისმგებელია, ეფექტურად არავინ არ არის.',
+    en: 'Owner — who is specifically responsible for this initiative? A name or role. If everyone is responsible, effectively no one is.',
+  },
+};
+
+const OBJECTIVE_EXAMPLES: Record<string, Record<string, string>> = {
+  financial: {
+    ka: 'მაგ: "ექსპორტის შემოსავლის გაზრდა 50,000$-მდე 2025 წლის ბოლოს"',
+    en: 'e.g. "Grow export revenue to $50,000 by end of 2025"',
+  },
+  customer: {
+    ka: 'მაგ: "3 ახალი გერმანელი მყიდველის მოზიდვა ამ სეზონამდე"',
+    en: 'e.g. "Attract 3 new buyers in Germany this season"',
+  },
+  internal: {
+    ka: 'მაგ: "ISO 22000 სერტიფიკატის მიღება წლის ბოლომდე"',
+    en: 'e.g. "Obtain ISO 22000 food safety certification by year end"',
+  },
+  learning: {
+    ka: 'მაგ: "გუნდის ექსპორტის ტრენინგი — მინიმუმ 3 თანამშრომელი"',
+    en: 'e.g. "Complete export readiness training for at least 3 team members"',
+  },
+};
 
 type EditState = {
   type: 'objective' | 'kpi' | 'initiative';
@@ -169,13 +240,25 @@ export default function BscTable({
         <thead>
           <tr>
             <th className={th} style={{ width: '22%' }}>{lang === 'ka' ? 'მიზანი' : 'Objective'}</th>
-            <th className={th} style={{ width: '13%' }}>KPI</th>
-            <th className={th} style={{ width: '6%' }}>{lang === 'ka' ? 'ერთ.' : 'Unit'}</th>
-            <th className={th} style={{ width: '7%' }}>{lang === 'ka' ? 'საწყ.' : 'Base'}</th>
-            <th className={th} style={{ width: '7%' }}>{lang === 'ka' ? 'სამ.' : 'Target'}</th>
+            <th className={th} style={{ width: '13%' }}>
+              KPI<InfoTooltip text={KPI_INFO.name[lang]} />
+            </th>
+            <th className={th} style={{ width: '6%' }}>
+              {lang === 'ka' ? 'ერთ.' : 'Unit'}<InfoTooltip text={KPI_INFO.unit[lang]} />
+            </th>
+            <th className={th} style={{ width: '7%' }}>
+              {lang === 'ka' ? 'საწყ.' : 'Base'}<InfoTooltip text={KPI_INFO.baseline[lang]} />
+            </th>
+            <th className={th} style={{ width: '7%' }}>
+              {lang === 'ka' ? 'სამ.' : 'Target'}<InfoTooltip text={KPI_INFO.target[lang]} />
+            </th>
             <th className={th} style={{ width: '7%' }}>{lang === 'ka' ? 'სიხ.' : 'Freq.'}</th>
-            <th className={th} style={{ width: '14%' }}>{lang === 'ka' ? 'ინიციატივა' : 'Initiative'}</th>
-            <th className={th} style={{ width: '7%' }}>{lang === 'ka' ? 'პასუხ.' : 'Owner'}</th>
+            <th className={th} style={{ width: '14%' }}>
+              {lang === 'ka' ? 'ინიციატივა' : 'Initiative'}<InfoTooltip text={INITIATIVE_INFO.name[lang]} />
+            </th>
+            <th className={th} style={{ width: '7%' }}>
+              {lang === 'ka' ? 'პასუხ.' : 'Owner'}<InfoTooltip text={INITIATIVE_INFO.owner[lang]} />
+            </th>
             <th className={th} style={{ width: '7%' }}>{lang === 'ka' ? 'ვადა' : 'Deadline'}</th>
             <th className={th} style={{ width: '6%' }}>{lang === 'ka' ? 'სტ.' : 'Status'}</th>
             <th className={th} style={{ width: '4%' }}></th>
@@ -208,6 +291,7 @@ export default function BscTable({
                   }}
                 >
                   {PERSPECTIVE_LABELS[p][lang]}
+                  <InfoTooltip text={PERSPECTIVE_INFO[p][lang]} />
                   <span className="ml-2 font-normal text-gray-500 text-xs">
                     {PERSPECTIVE_DESCRIPTIONS[p][lang]}
                   </span>
@@ -427,7 +511,12 @@ export default function BscTable({
             } else {
               rows.push(
                 <tr key={`add-obj-${p}`} style={{ borderLeft: '3px solid transparent' }}>
-                  <td colSpan={11} className="px-3 py-3 border-b border-gray-100">
+                  <td colSpan={11} className="px-3 py-2.5 border-b border-gray-100">
+                    {objs.length === 0 && (
+                      <p className="text-xs italic mb-2" style={{ color: ACCENT[p] + '99' }}>
+                        {OBJECTIVE_EXAMPLES[p][lang]}
+                      </p>
+                    )}
                     <button
                       onClick={() => { setAddingObjFor(p); setAddingKpiFor(null); setAddingInitFor(null); }}
                       className="text-xs font-medium transition-colors"
