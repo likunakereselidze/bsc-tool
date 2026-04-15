@@ -343,16 +343,12 @@ export default function BscExport({
   lang: Language;
 }) {
   const [kpiEntries, setKpiEntries] = useState<KpiEntry[]>([]);
-  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     fetch(`/api/kpi-entries?session_id=${session.id}`)
       .then((r) => r.json())
-      .then((data: KpiEntry[]) => {
-        setKpiEntries(data);
-        setReady(true);
-      })
-      .catch(() => setReady(true));
+      .then((data: KpiEntry[]) => setKpiEntries(data))
+      .catch(() => {/* ignore */});
   }, [session.id]);
 
   const totalObjectives = session.objectives.length;
@@ -365,11 +361,13 @@ export default function BscExport({
 
   const fileName = `${session.company_name.replace(/\s+/g, '_')}_BSC.pdf`;
 
-  const [pdfInstance, updatePdf] = usePDF({
-    document: ready ? (
-      <BscDocument session={session} lang={lang} kpiEntries={kpiEntries} />
-    ) : undefined,
-  });
+  // Always pass a valid document — never undefined (causes hasOwnProperty crash in react-pdf v3)
+  const pdfDoc = useMemo(
+    () => <BscDocument session={session} lang={lang} kpiEntries={kpiEntries} />,
+    [session, lang, kpiEntries]
+  );
+
+  const [pdfInstance] = usePDF({ document: pdfDoc });
 
   return (
     <div className="space-y-6 max-w-lg">
@@ -400,17 +398,8 @@ export default function BscExport({
         ))}
       </div>
 
-      {/* Font note */}
-      {lang === 'ka' && (
-        <div className="rounded-xl border border-amber-100 bg-amber-50 px-4 py-3 text-xs text-amber-700 leading-relaxed">
-          {lang === 'ka'
-            ? 'PDF-ში ქართული ტექსტი გამოჩნდება, თუ Google Fonts ხელმისაწვდომია სერვერზე. ინტერნეტ კავშირის გარეშე შეიძლება ასოები არ ჩანდეს.'
-            : 'Georgian text requires Google Fonts to be reachable from the server.'}
-        </div>
-      )}
-
       {/* Download button */}
-      {!ready || pdfInstance.loading ? (
+      {pdfInstance.loading ? (
         <div className="inline-flex items-center gap-2 px-6 py-3 rounded-full text-sm font-semibold text-white opacity-60" style={{ background: '#2563eb' }}>
           {lang === 'ka' ? 'მომზადება...' : 'Preparing PDF...'}
         </div>
