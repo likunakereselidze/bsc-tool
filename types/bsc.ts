@@ -113,6 +113,17 @@ export interface BscObjective {
   title: string;
   description: string | null;
   sort_order: number;
+  x: number | null;
+  y: number | null;
+  created_at: string;
+}
+
+export interface KpiEntry {
+  id: string;
+  kpi_id: string;
+  actual_value: string;
+  period: string | null;
+  note: string | null;
   created_at: string;
 }
 

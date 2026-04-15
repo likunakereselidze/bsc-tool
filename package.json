@@ -9,7 +9,10 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.89.0",
     "@fontsource/playfair-display": "^5.2.8",
+    "@react-pdf/renderer": "^3.4.5",
+    "@xyflow/react": "^12.10.2",
     "next": "16.2.3",
     "pg": "^8.20.0",
     "react": "19.2.4",

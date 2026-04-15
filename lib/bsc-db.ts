@@ -9,9 +9,32 @@ import type {
   Language,
   Perspective,
   InitiativeStatus,
+  KpiEntry,
 } from '@/types/bsc';
 
 // Sessions
+export async function updateSession(
+  id: string,
+  data: { company_name?: string; industry?: string; export_stage?: string }
+): Promise<BscSession> {
+  const sets: string[] = [];
+  const vals: unknown[] = [id];
+  let i = 2;
+  if (data.company_name !== undefined) { sets.push(`company_name = $${i++}`); vals.push(data.company_name); }
+  if (data.industry !== undefined)     { sets.push(`industry = $${i++}`); vals.push(data.industry || null); }
+  if (data.export_stage !== undefined) { sets.push(`export_stage = $${i++}`); vals.push(data.export_stage || null); }
+  if (sets.length === 0) {
+    const res = await pool.query('SELECT * FROM bsc_sessions WHERE id = $1', [id]);
+    return res.rows[0];
+  }
+  sets.push(`updated_at = NOW()`);
+  const res = await pool.query(
+    `UPDATE bsc_sessions SET ${sets.join(', ')} WHERE id = $1 RETURNING *`,
+    vals
+  );
+  return res.rows[0];
+}
+
 export async function createSession(data: {
   company_name: string;
   industry?: string;
@@ -98,14 +121,24 @@ export async function createObjective(data: {
 
 export async function updateObjective(
   id: string,
-  data: { title?: string; description?: string }
+  data: { title?: string; description?: string; x?: number | null; y?: number | null }
 ): Promise<BscObjective> {
   const res = await pool.query(
     `UPDATE bsc_objectives SET
        title = COALESCE($2, title),
-       description = COALESCE($3, description)
+       description = COALESCE($3, description),
+       x = CASE WHEN $4::boolean THEN $5::float ELSE x END,
+       y = CASE WHEN $6::boolean THEN $7::float ELSE y END
      WHERE id = $1 RETURNING *`,
-    [id, data.title ?? null, data.description ?? null]
+    [
+      id,
+      data.title ?? null,
+      data.description ?? null,
+      'x' in data,
+      data.x ?? null,
+      'y' in data,
+      data.y ?? null,
+    ]
   );
   return res.rows[0];
 }
@@ -201,6 +234,45 @@ export async function updateInitiative(
 
 export async function deleteInitiative(id: string): Promise<void> {
   await pool.query('DELETE FROM bsc_initiatives WHERE id = $1', [id]);
+}
+
+// KPI entries (actuals)
+export async function createKpiEntry(data: {
+  kpi_id: string;
+  actual_value: string;
+  period?: string;
+  note?: string;
+}): Promise<KpiEntry> {
+  const res = await pool.query(
+    `INSERT INTO kpi_entries (kpi_id, actual_value, period, note)
+     VALUES ($1, $2, $3, $4) RETURNING *`,
+    [data.kpi_id, data.actual_value, data.period ?? null, data.note ?? null]
+  );
+  return res.rows[0];
+}
+
+export async function getKpiEntries(kpi_id: string): Promise<KpiEntry[]> {
+  const res = await pool.query(
+    'SELECT * FROM kpi_entries WHERE kpi_id = $1 ORDER BY created_at DESC',
+    [kpi_id]
+  );
+  return res.rows;
+}
+
+export async function getKpiEntriesForSession(session_id: string): Promise<KpiEntry[]> {
+  const res = await pool.query(
+    `SELECT ke.* FROM kpi_entries ke
+     JOIN bsc_kpis k ON k.id = ke.kpi_id
+     JOIN bsc_objectives o ON o.id = k.objective_id
+     WHERE o.session_id = $1
+     ORDER BY ke.created_at DESC`,
+    [session_id]
+  );
+  return res.rows;
+}
+
+export async function deleteKpiEntry(id: string): Promise<void> {
+  await pool.query('DELETE FROM kpi_entries WHERE id = $1', [id]);
 }
 
 // Strategy map links
