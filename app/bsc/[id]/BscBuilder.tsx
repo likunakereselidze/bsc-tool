@@ -175,6 +175,12 @@ export default function BscBuilder({ initialSession }: { initialSession: FullSes
             >
               {copied ? (lang === 'ka' ? 'კოპირდა' : 'Copied') : (lang === 'ka' ? 'ლინკი' : 'Share link')}
             </button>
+            <a
+              href="/bsc/new?new=1"
+              className="text-xs px-3 py-1.5 rounded-full border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors hidden sm:inline-flex"
+            >
+              {lang === 'ka' ? '+ ახალი BSC' : '+ New BSC'}
+            </a>
           </div>
         </div>
 

@@ -15,9 +15,18 @@ export async function POST(req: NextRequest) {
       industry: industry?.trim() || undefined,
       export_stage: export_stage || undefined,
       language: language === 'en' ? 'en' : 'ka',
+      full_name: body.full_name?.trim() || undefined,
+      email: body.email?.trim().toLowerCase() || undefined,
     });
 
-    return NextResponse.json(session, { status: 201 });
+    const response = NextResponse.json(session, { status: 201 });
+    response.cookies.set('bsc_session_id', session.id, {
+      httpOnly: true,
+      path: '/',
+      maxAge: 365 * 24 * 60 * 60,
+      sameSite: 'lax',
+    });
+    return response;
   } catch (err) {
     console.error('POST /api/sessions', err);
     return NextResponse.json({ error: 'Server error' }, { status: 500 });

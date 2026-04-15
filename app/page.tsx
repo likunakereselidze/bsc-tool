@@ -1,6 +1,12 @@
 import Link from 'next/link';
+import { cookies } from 'next/headers';
+import { getSession } from '@/lib/bsc-db';
 
-export default function LandingPage() {
+export default async function LandingPage() {
+  const cookieStore = await cookies();
+  const sessionId = cookieStore.get('bsc_session_id')?.value;
+  const existingSession = sessionId ? await getSession(sessionId) : null;
+
   return (
     <div className="min-h-screen flex flex-col bg-white">
       {/* Nav */}
@@ -9,23 +15,61 @@ export default function LandingPage() {
           <span className="font-semibold text-base text-gray-900">BSC Tool</span>
           <div className="flex items-center gap-3">
             <Link
-              href="/bsc/new?lang=en"
+              href="/bsc/new?lang=en&new=1"
               className="text-sm text-gray-500 hover:text-gray-900 transition-colors px-4 py-2"
             >
               English
             </Link>
             <Link
-              href="/bsc/new"
+              href={existingSession ? `/bsc/${existingSession.id}` : '/bsc/new'}
               className="text-sm font-medium text-white px-5 py-2 rounded-full transition-colors hover:opacity-90"
               style={{ background: '#2563eb' }}
             >
-              დაწყება
+              {existingSession ? 'გაგრძელება' : 'დაწყება'}
             </Link>
           </div>
         </div>
       </header>
 
       <main className="flex-1">
+
+        {/* Continue banner — shown only to returning users */}
+        {existingSession && (
+          <div className="border-b border-green-100 bg-green-50">
+            <div className="max-w-5xl mx-auto px-8 py-4 flex items-center justify-between flex-wrap gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-2 h-2 rounded-full bg-green-500 shrink-0" />
+                <div>
+                  <p className="text-sm font-semibold text-green-900">
+                    {existingSession.company_name}
+                    {existingSession.full_name && (
+                      <span className="font-normal text-green-700 ml-2">— {existingSession.full_name}</span>
+                    )}
+                  </p>
+                  <p className="text-xs text-green-600">
+                    BSC შენახულია · გააგრძელე იქიდან სადაც შეჩერდი
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <Link
+                  href={`/bsc/${existingSession.id}`}
+                  className="text-sm font-semibold text-white px-5 py-2 rounded-full"
+                  style={{ background: '#059669' }}
+                >
+                  გაგრძელება →
+                </Link>
+                <Link
+                  href="/bsc/new?new=1"
+                  className="text-xs text-green-600 hover:text-green-800 underline"
+                >
+                  ახალი BSC
+                </Link>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Hero */}
         <section className="max-w-5xl mx-auto px-8 pt-24 pb-20 text-center">
           <div
@@ -47,23 +91,42 @@ export default function LandingPage() {
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-            <Link
-              href="/bsc/new"
-              className="text-base font-medium text-white px-7 py-3 rounded-full transition-colors"
-              style={{ background: '#2563eb' }}
-            >
-              BSC-ის შექმნა
-            </Link>
-            <Link
-              href="/bsc/new?lang=en"
-              className="text-base font-medium text-gray-700 px-7 py-3 rounded-full border border-gray-200 hover:bg-gray-50 transition-colors"
-            >
-              Create in English
-            </Link>
+            {existingSession ? (
+              <>
+                <Link
+                  href={`/bsc/${existingSession.id}`}
+                  className="text-base font-medium text-white px-7 py-3 rounded-full transition-colors"
+                  style={{ background: '#059669' }}
+                >
+                  BSC-ის გაგრძელება
+                </Link>
+                <Link
+                  href="/bsc/new?new=1"
+                  className="text-base font-medium text-gray-700 px-7 py-3 rounded-full border border-gray-200 hover:bg-gray-50 transition-colors"
+                >
+                  ახალი BSC შექმნა
+                </Link>
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/bsc/new"
+                  className="text-base font-medium text-white px-7 py-3 rounded-full transition-colors"
+                  style={{ background: '#2563eb' }}
+                >
+                  BSC-ის შექმნა
+                </Link>
+                <Link
+                  href="/bsc/new?lang=en&new=1"
+                  className="text-base font-medium text-gray-700 px-7 py-3 rounded-full border border-gray-200 hover:bg-gray-50 transition-colors"
+                >
+                  Create in English
+                </Link>
+              </>
+            )}
           </div>
         </section>
 
-        {/* Divider */}
         <div className="border-t border-gray-100" />
 
         {/* Features */}
@@ -71,25 +134,19 @@ export default function LandingPage() {
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-8">
             {[
               {
-                title: '4 Perspectives',
                 title_ka: '4 პერსპექტივა',
                 desc_ka: 'ფინანსური, კლიენტი, შიდა პროცესები, სწავლა და ზრდა',
-                desc: 'Financial, Customer, Internal Processes, Learning & Capacity',
               },
               {
-                title: 'KPIs & Initiatives',
                 title_ka: 'KPI და ინიციატივები',
                 desc_ka: 'სამიზნეები, ვადები, პასუხისმგებელი პირები',
-                desc: 'Targets, deadlines, owners — structured per objective',
               },
               {
-                title: 'Shareable Link',
-                title_ka: 'პირადი ლინკი',
-                desc_ka: 'შეინახე და გააზიარე. რეგისტრაცია არ სჭირდება.',
-                desc: 'UUID-based link. No account needed. Save and share.',
+                title_ka: 'AI + PDF',
+                desc_ka: 'AI-ით გენერაცია, სტრატეგიული რუქა, PDF ჩამოტვირთვა',
               },
             ].map((f) => (
-              <div key={f.title} className="space-y-2">
+              <div key={f.title_ka} className="space-y-2">
                 <div className="w-8 h-0.5 mb-4" style={{ background: '#f97316' }} />
                 <h3 className="font-semibold text-gray-900 text-base">{f.title_ka}</h3>
                 <p className="text-sm text-gray-500 leading-relaxed">{f.desc_ka}</p>
@@ -98,10 +155,9 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* Divider */}
         <div className="border-t border-gray-100" />
 
-        {/* Pricing tiers */}
+        {/* Pricing */}
         <section className="max-w-5xl mx-auto px-8 py-20">
           <h2 className="font-display text-3xl font-bold text-gray-900 mb-12 text-center">სამი ეტაპი</h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
@@ -109,9 +165,9 @@ export default function LandingPage() {
               {
                 tier: 'უფასო',
                 price: '0 GEL',
-                desc: 'სრული BSC — მიზნები, KPI, ინიციატივები, სტრატეგიული რუქა',
-                cta: 'დაწყება',
-                href: '/bsc/new',
+                desc: 'სრული BSC — მიზნები, KPI, ინიციატივები, სტრატეგიული რუქა, AI გენერაცია',
+                cta: existingSession ? 'გაგრძელება' : 'დაწყება',
+                href: existingSession ? `/bsc/${existingSession.id}` : '/bsc/new',
                 primary: false,
               },
               {
@@ -161,8 +217,12 @@ export default function LandingPage() {
       </main>
 
       <footer className="border-t border-gray-100 py-6">
-        <div className="max-w-5xl mx-auto px-8 text-center text-xs text-gray-400">
-          Digital Export Manager &mdash; Lia Kereselidze
+        <div className="max-w-5xl mx-auto px-8 flex items-center justify-between flex-wrap gap-2 text-xs text-gray-400">
+          <span>Digital Export Manager &mdash; Lia Kereselidze</span>
+          <div className="flex gap-4">
+            <Link href="/privacy" className="hover:text-gray-600">Privacy Policy</Link>
+            <Link href="/terms" className="hover:text-gray-600">Terms of Service</Link>
+          </div>
         </div>
       </footer>
     </div>
