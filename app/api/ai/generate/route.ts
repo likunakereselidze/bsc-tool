@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { getSession } from '@/lib/bsc-db';
+import pool from '@/lib/db';
+
+const FREE_TIER_LIMIT = 1;
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -22,6 +25,18 @@ export async function POST(req: NextRequest) {
 
     const session = await getSession(session_id);
     if (!session) return NextResponse.json({ error: 'Session not found' }, { status: 404 });
+
+    // Enforce generation limit for free tier
+    if (!session.paid_tier) {
+      const countRes = await pool.query(
+        'SELECT ai_generations_used FROM bsc_sessions WHERE id = $1',
+        [session_id]
+      );
+      const used = countRes.rows[0]?.ai_generations_used ?? 0;
+      if (used >= FREE_TIER_LIMIT) {
+        return NextResponse.json({ error: 'limit_reached' }, { status: 403 });
+      }
+    }
 
     const { company_name, industry, export_stage, language } = session;
     const stageName = export_stage ? (STAGE_LABELS[export_stage] ?? export_stage) : 'unknown stage';
@@ -67,7 +82,7 @@ Additional rules:
 
     const message = await client.messages.create({
       model: 'claude-sonnet-4-6',
-      max_tokens: 2048,
+      max_tokens: 4096,
       messages: [{ role: 'user', content: prompt }],
     });
 
@@ -94,6 +109,12 @@ Additional rules:
         return NextResponse.json({ error: `Invalid response: missing ${p}` }, { status: 500 });
       }
     }
+
+    // Increment usage counter
+    await pool.query(
+      'UPDATE bsc_sessions SET ai_generations_used = ai_generations_used + 1 WHERE id = $1',
+      [session_id]
+    );
 
     return NextResponse.json(result);
   } catch (err) {

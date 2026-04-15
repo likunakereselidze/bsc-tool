@@ -54,6 +54,7 @@ export default function BscBuilder({ initialSession }: { initialSession: FullSes
   const [aiPreview, setAiPreview] = useState<AiPreview | null>(null);
   const [aiAccepting, setAiAccepting] = useState(false);
   const [aiError, setAiError] = useState<string | null>(null);
+  const [aiLimitReached, setAiLimitReached] = useState(false);
 
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || '';
   const bscUrl = `${baseUrl}/bsc/${session.id}`;
@@ -84,7 +85,11 @@ export default function BscBuilder({ initialSession }: { initialSession: FullSes
       });
       const data = await res.json();
       if (!res.ok) {
-        setAiError(data.error ?? 'AI generation failed');
+        if (data.error === 'limit_reached') {
+          setAiLimitReached(true);
+        } else {
+          setAiError(data.error ?? 'AI generation failed');
+        }
       } else {
         setAiPreview(data);
       }
@@ -315,17 +320,30 @@ export default function BscBuilder({ initialSession }: { initialSession: FullSes
                     : 'Click any cell to edit. Use + buttons to add objectives, KPIs, and initiatives.'}
                 </p>
               </div>
-              <button
-                onClick={generateWithAi}
-                disabled={aiGenerating}
-                className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold text-white disabled:opacity-60 shrink-0 transition-opacity"
-                style={{ background: 'linear-gradient(135deg, #7c3aed, #2563eb)' }}
-              >
-                <span>{aiGenerating ? '...' : '✦'}</span>
-                {aiGenerating
-                  ? (lang === 'ka' ? 'AI ამზადებს...' : 'Generating...')
-                  : (lang === 'ka' ? 'AI-ით გენერაცია' : 'Generate with AI')}
-              </button>
+              <div className="flex flex-col items-end gap-1 shrink-0">
+                <button
+                  onClick={generateWithAi}
+                  disabled={aiGenerating || aiLimitReached}
+                  className="flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold text-white disabled:opacity-50 transition-opacity"
+                  style={{ background: aiLimitReached ? '#9ca3af' : 'linear-gradient(135deg, #7c3aed, #2563eb)' }}
+                >
+                  <span>{aiGenerating ? '...' : '✦'}</span>
+                  {aiGenerating
+                    ? (lang === 'ka' ? 'AI ამზადებს...' : 'Generating...')
+                    : aiLimitReached
+                    ? (lang === 'ka' ? 'გამოყენებულია' : 'Used')
+                    : (lang === 'ka' ? 'AI-ით გენერაცია' : 'Generate with AI')}
+                </button>
+                {aiLimitReached ? (
+                  <span className="text-xs text-gray-400">
+                    {lang === 'ka' ? 'უფასო: 1 გენერაცია. განახლება — მალე.' : 'Free tier: 1 generation. Upgrade coming soon.'}
+                  </span>
+                ) : (
+                  <span className="text-xs text-gray-400">
+                    {lang === 'ka' ? 'უფასო: 1 გენერაცია' : 'Free tier: 1 generation'}
+                  </span>
+                )}
+              </div>
             </div>
 
             {/* AI error */}
