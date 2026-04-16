@@ -110,8 +110,8 @@ export async function createObjective(data: {
 }): Promise<BscObjective> {
   const res = await pool.query(
     `INSERT INTO bsc_objectives (session_id, perspective, title, description, sort_order)
-     VALUES ($1, $2, $3, $4,
-       (SELECT COALESCE(MAX(sort_order), -1) + 1 FROM bsc_objectives WHERE session_id = $1 AND perspective = $2)
+     VALUES ($1, $2::varchar, $3, $4,
+       (SELECT COALESCE(MAX(sort_order), -1) + 1 FROM bsc_objectives WHERE session_id = $1 AND perspective = $2::varchar)
      ) RETURNING *`,
     [data.session_id, data.perspective, data.title, data.description ?? null]
   );

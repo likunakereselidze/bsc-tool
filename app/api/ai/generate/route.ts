@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { getSession } from '@/lib/bsc-db';
+import { getSessionIdFromCookie } from '@/lib/auth';
 import pool from '@/lib/db';
 
 const FREE_TIER_LIMIT = 1;
@@ -23,20 +24,12 @@ export async function POST(req: NextRequest) {
     const { session_id } = await req.json();
     if (!session_id) return NextResponse.json({ error: 'session_id required' }, { status: 400 });
 
+    if (getSessionIdFromCookie(req) !== session_id) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
     const session = await getSession(session_id);
     if (!session) return NextResponse.json({ error: 'Session not found' }, { status: 404 });
-
-    // Enforce generation limit for free tier
-    if (!session.paid_tier) {
-      const countRes = await pool.query(
-        'SELECT ai_generations_used FROM bsc_sessions WHERE id = $1',
-        [session_id]
-      );
-      const used = countRes.rows[0]?.ai_generations_used ?? 0;
-      if (used >= FREE_TIER_LIMIT) {
-        return NextResponse.json({ error: 'limit_reached' }, { status: 403 });
-      }
-    }
 
     const { company_name, industry, export_stage, language } = session;
     const stageName = export_stage ? (STAGE_LABELS[export_stage] ?? export_stage) : 'unknown stage';
@@ -110,11 +103,17 @@ Additional rules:
       }
     }
 
-    // Increment usage counter
-    await pool.query(
-      'UPDATE bsc_sessions SET ai_generations_used = ai_generations_used + 1 WHERE id = $1',
-      [session_id]
+    // Atomically increment counter, enforcing free-tier limit
+    const limitRes = await pool.query(
+      `UPDATE bsc_sessions
+       SET ai_generations_used = ai_generations_used + 1
+       WHERE id = $1 AND (paid_tier = true OR ai_generations_used < $2)
+       RETURNING id`,
+      [session_id, FREE_TIER_LIMIT]
     );
+    if ((limitRes.rowCount ?? 0) === 0) {
+      return NextResponse.json({ error: 'limit_reached' }, { status: 403 });
+    }
 
     return NextResponse.json(result);
   } catch (err) {

@@ -53,6 +53,14 @@ export default function BscBuilder({ initialSession }: { initialSession: FullSes
   const [aiError, setAiError] = useState<string | null>(null);
   const [aiLimitReached, setAiLimitReached] = useState(false);
 
+  const totalObjectives = session.objectives.length;
+  const objectivesWithKpis = session.objectives.filter(o => o.kpis.length > 0).length;
+  const perspectivesWithObjs = PERSPECTIVES.filter(p => session.objectives.some(o => o.perspective === p)).length;
+  const completionPct = totalObjectives === 0 ? 0 : Math.round(
+    (perspectivesWithObjs / 4) * 50 + (objectivesWithKpis / totalObjectives) * 50
+  );
+  const isComplete = perspectivesWithObjs === 4 && totalObjectives > 0 && objectivesWithKpis === totalObjectives;
+
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || '';
   const bscUrl = `${baseUrl}/bsc/${session.id}`;
 
@@ -211,7 +219,7 @@ export default function BscBuilder({ initialSession }: { initialSession: FullSes
                     : { borderBottomColor: 'transparent', color: '#6b7280' }
                 }
               >
-                {TAB_LABELS[t][lang]}
+                {TAB_LABELS[t][lang]}{t === 'export' && totalObjectives > 0 ? <span className="ml-1 text-gray-300">↓</span> : null}
               </button>
             ))}
           </div>
@@ -338,6 +346,21 @@ export default function BscBuilder({ initialSession }: { initialSession: FullSes
                     ? 'დააჭირე ნებისმიერ უჯრაზე რედაქტირებისთვის. + ღილაკებით ამატებ ახალ მიზნებს, KPI-ებს, ინიციატივებს.'
                     : 'Click any cell to edit. Use + buttons to add objectives, KPIs, and initiatives.'}
                 </p>
+                {totalObjectives > 0 && (
+                  <div className="flex items-center gap-2 mt-2">
+                    <div className="h-1.5 w-32 rounded-full bg-gray-100 overflow-hidden">
+                      <div
+                        className="h-full rounded-full transition-all"
+                        style={{ width: `${completionPct}%`, background: isComplete ? '#059669' : '#2563eb' }}
+                      />
+                    </div>
+                    <span className="text-xs text-gray-400">
+                      {isComplete
+                        ? (lang === 'ka' ? 'სრული ✓' : 'Complete ✓')
+                        : `${completionPct}%`}
+                    </span>
+                  </div>
+                )}
               </div>
               <div className="flex flex-col items-end gap-1 shrink-0">
                 <button
@@ -436,6 +459,34 @@ export default function BscBuilder({ initialSession }: { initialSession: FullSes
                     {lang === 'ka' ? 'გაუქმება' : 'Dismiss'}
                   </button>
                 </div>
+              </div>
+            )}
+
+            {session.objectives.length === 0 && !aiPreview && !aiGenerating && (
+              <div className="rounded-2xl border-2 border-dashed border-blue-200 bg-blue-50/50 p-8 text-center space-y-4">
+                <p className="text-2xl">✦</p>
+                <div>
+                  <p className="font-semibold text-gray-800 text-base mb-1">
+                    {lang === 'ka' ? 'BSC ცარიელია' : 'Your BSC is empty'}
+                  </p>
+                  <p className="text-sm text-gray-500">
+                    {lang === 'ka'
+                      ? 'გამოიყენე AI, რომ 30 წამში მიიღო სრული Balanced Scorecard შენი კომპანიისთვის.'
+                      : 'Use AI to get a complete Balanced Scorecard for your company in 30 seconds.'}
+                  </p>
+                </div>
+                <button
+                  onClick={generateWithAi}
+                  disabled={aiGenerating || aiLimitReached}
+                  className="inline-flex items-center gap-2 px-6 py-3 rounded-full text-sm font-semibold text-white disabled:opacity-50 transition-opacity"
+                  style={{ background: 'linear-gradient(135deg, #7c3aed, #2563eb)' }}
+                >
+                  <span>✦</span>
+                  {lang === 'ka' ? 'AI-ით გენერაცია' : 'Generate with AI'}
+                </button>
+                <p className="text-xs text-gray-400">
+                  {lang === 'ka' ? 'ან ხელით შეავსე ქვემოთ' : 'or fill in manually below'}
+                </p>
               </div>
             )}
 

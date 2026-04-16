@@ -95,6 +95,21 @@ export default function BscProgress({
 
   return (
     <div className="space-y-6">
+      {session.objectives.reduce((s,o) => s + o.kpis.length, 0) > 0 && entries.length === 0 && (
+        <div className="rounded-2xl border border-blue-100 bg-blue-50 px-5 py-4 flex items-start gap-3 mb-6">
+          <span className="text-blue-400 text-lg mt-0.5">📊</span>
+          <div>
+            <p className="text-sm font-semibold text-blue-900 mb-0.5">
+              {lang === 'ka' ? 'პროგრესის ჩაწერა' : 'Start tracking progress'}
+            </p>
+            <p className="text-xs text-blue-700">
+              {lang === 'ka'
+                ? 'შენი BSC-ი KPI-ებით არის მზად. ახლა დაიწყე მათი შედეგების ჩაწერა — ყოველ კვარტალში ან თვეში.'
+                : 'Your BSC is set up with KPIs. Start logging actual values — monthly or quarterly — to track your strategy.'}
+            </p>
+          </div>
+        </div>
+      )}
       <div>
         <h2 className="font-display text-xl font-bold text-gray-900 mb-1">
           {lang === 'ka' ? 'KPI პროგრესი' : 'KPI Progress'}

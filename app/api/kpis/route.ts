@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createKpi } from '@/lib/bsc-db';
+import { canWriteObjective } from '@/lib/auth';
 
 export async function POST(req: NextRequest) {
   try {
@@ -8,6 +9,10 @@ export async function POST(req: NextRequest) {
 
     if (!objective_id || !name?.trim()) {
       return NextResponse.json({ error: 'objective_id, name required' }, { status: 400 });
+    }
+
+    if (!await canWriteObjective(req, objective_id)) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     const kpi = await createKpi({

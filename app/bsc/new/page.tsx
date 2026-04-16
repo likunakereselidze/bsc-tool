@@ -212,6 +212,13 @@ function NewBscForm() {
                 ? (lang === 'ka' ? 'იქმნება...' : 'Creating...')
                 : (lang === 'ka' ? 'შემდეგი' : 'Continue')}
             </button>
+
+            <p className="text-center text-sm text-gray-400">
+              {lang === 'ka' ? 'უკვე გაქვს BSC?' : 'Already have a BSC?'}{' '}
+              <a href={`/bsc/recover${lang === 'en' ? '?lang=en' : ''}`} className="text-blue-600 hover:underline">
+                {lang === 'ka' ? 'ლინკის მიღება' : 'Get my link'}
+              </a>
+            </p>
           </form>
         </div>
       </main>

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createObjective } from '@/lib/bsc-db';
+import { getSessionIdFromCookie } from '@/lib/auth';
 import type { Perspective } from '@/types/bsc';
 
 const VALID_PERSPECTIVES: Perspective[] = ['customer', 'financial', 'internal', 'learning'];
@@ -11,6 +12,10 @@ export async function POST(req: NextRequest) {
 
     if (!session_id || !perspective || !title?.trim()) {
       return NextResponse.json({ error: 'session_id, perspective, title required' }, { status: 400 });
+    }
+
+    if (getSessionIdFromCookie(req) !== session_id) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     if (!VALID_PERSPECTIVES.includes(perspective)) {
