@@ -312,3 +312,67 @@ export async function sendBscCompletionEmail({
 
   await sendEmail({ to, name: fullName, subject, html });
 }
+
+// ── Payment confirmation ───────────────────────────────────────────────────
+export async function sendBscPaymentEmail({
+  to,
+  fullName,
+  companyName,
+  sessionId,
+  language,
+  plan,
+}: {
+  to: string;
+  fullName: string;
+  companyName: string;
+  sessionId: string;
+  language: string;
+  plan: string;
+}) {
+  const bscUrl = `${BASE_URL}/bsc/${sessionId}`;
+  const calendlyUrl = process.env.CALENDLY_URL || 'https://calendly.com/likunakereselidze/30min';
+  const isKa = language === 'ka';
+  const n = esc(fullName);
+  const c = esc(companyName);
+  const planName = plan === 'sprint' ? 'BSC Sprint' : 'BSC Implementation';
+
+  const subject = isKa
+    ? `${companyName} — გადახდა დადასტურდა`
+    : `${companyName} — Payment confirmed`;
+
+  const html = isKa ? `
+    <div style="font-family: sans-serif; max-width: 520px; margin: 0 auto; padding: 32px 24px; color: #1f2937;">
+      <p style="font-size: 18px; font-weight: 700; margin: 0 0 8px;">${n},</p>
+      <p style="font-size: 15px; color: #374151; margin: 0 0 8px;"><strong>${planName}</strong> — გადახდა წარმატებით დასრულდა.</p>
+      <p style="font-size: 15px; color: #374151; margin: 0 0 24px;">შემდეგი ნაბიჯი: დაჯავშნე პირველი სესია.</p>
+
+      <a href="${calendlyUrl}" style="display: inline-block; background: #059669; color: #fff; font-size: 14px; font-weight: 600; padding: 12px 24px; border-radius: 100px; text-decoration: none; margin-bottom: 28px;">
+        სესიის დაჯავშნა →
+      </a>
+
+      <p style="font-size: 13px; color: #6b7280; margin: 0 0 8px;">შენი BSC:</p>
+      <p style="font-size: 12px; color: #9ca3af; word-break: break-all; margin: 0 0 28px;">${bscUrl}</p>
+
+      <hr style="border: none; border-top: 1px solid #f3f4f6; margin: 0 0 20px;" />
+      <p style="font-size: 12px; color: #9ca3af; margin: 0;">BSC Tool · bsc.demospace.online</p>
+    </div>
+  ` : `
+    <div style="font-family: sans-serif; max-width: 520px; margin: 0 auto; padding: 32px 24px; color: #1f2937;">
+      <p style="font-size: 18px; font-weight: 700; margin: 0 0 8px;">Hi ${n},</p>
+      <p style="font-size: 15px; color: #374151; margin: 0 0 8px;">Your payment for <strong>${planName}</strong> is confirmed.</p>
+      <p style="font-size: 15px; color: #374151; margin: 0 0 24px;">Next step: book your first session.</p>
+
+      <a href="${calendlyUrl}" style="display: inline-block; background: #059669; color: #fff; font-size: 14px; font-weight: 600; padding: 12px 24px; border-radius: 100px; text-decoration: none; margin-bottom: 28px;">
+        Book my session →
+      </a>
+
+      <p style="font-size: 13px; color: #6b7280; margin: 0 0 8px;">Your BSC:</p>
+      <p style="font-size: 12px; color: #9ca3af; word-break: break-all; margin: 0 0 28px;">${bscUrl}</p>
+
+      <hr style="border: none; border-top: 1px solid #f3f4f6; margin: 0 0 20px;" />
+      <p style="font-size: 12px; color: #9ca3af; margin: 0;">BSC Tool · bsc.demospace.online</p>
+    </div>
+  `;
+
+  await sendEmail({ to, name: fullName, subject, html });
+}

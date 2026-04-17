@@ -13,8 +13,8 @@ import ErrorBoundary from './ErrorBoundary';
 const BscStrategyMap = dynamic(() => import('./BscStrategyMap'), { ssr: false });
 const BscExport = dynamic(() => import('./BscExport'), { ssr: false });
 
-type Tab = 'setup' | 'table' | 'map' | 'progress' | 'export';
-const TABS: Tab[] = ['setup', 'table', 'map', 'progress', 'export'];
+type Tab = 'setup' | 'table' | 'map' | 'progress' | 'export' | 'upgrade';
+const TABS: Tab[] = ['setup', 'table', 'map', 'progress', 'export', 'upgrade'];
 
 const TAB_LABELS: Record<Tab, Record<Language, string>> = {
   setup:    { ka: 'კომპანია',     en: 'Setup' },
@@ -22,6 +22,7 @@ const TAB_LABELS: Record<Tab, Record<Language, string>> = {
   map:      { ka: 'სტრ. რუქა',   en: 'Strategy Map' },
   progress: { ka: 'პროგრესი',    en: 'Progress' },
   export:   { ka: 'ექსპორტი',    en: 'Export' },
+  upgrade:  { ka: '✦ დახმარება', en: '✦ Get Help' },
 };
 
 
@@ -46,6 +47,8 @@ export default function BscBuilder({ initialSession }: { initialSession: FullSes
   type AiKpi = { name: string; unit: string; baseline: string; target: string };
   type AiObjective = { title: string; kpis: AiKpi[] };
   type AiPreview = Record<string, AiObjective[]>;
+
+  const [upgrading, setUpgrading] = useState<string | null>(null);
 
   const [aiGenerating, setAiGenerating] = useState(false);
   const [aiPreview, setAiPreview] = useState<AiPreview | null>(null);
@@ -216,6 +219,8 @@ export default function BscBuilder({ initialSession }: { initialSession: FullSes
                 style={
                   tab === t
                     ? { borderBottomColor: '#2563eb', color: '#2563eb', background: 'transparent' }
+                    : t === 'upgrade'
+                    ? { borderBottomColor: 'transparent', color: '#7c3aed', fontWeight: 600 }
                     : { borderBottomColor: 'transparent', color: '#6b7280' }
                 }
               >
@@ -513,6 +518,102 @@ export default function BscBuilder({ initialSession }: { initialSession: FullSes
           <ErrorBoundary>
             <BscExport session={session} lang={lang} />
           </ErrorBoundary>
+        )}
+
+        {/* TAB: Upgrade */}
+        {tab === 'upgrade' && (
+          <div className="max-w-2xl space-y-6">
+            <div>
+              <h2 className="font-display text-xl font-bold text-gray-900 mb-1">
+                {lang === 'ka' ? 'სტრატეგიული დახმარება' : 'Strategic Help'}
+              </h2>
+              <p className="text-sm text-gray-500">
+                {lang === 'ka'
+                  ? 'BSC-ი მხოლოდ დასაწყისია. მე პირადად დაგეხმარები სტრატეგიის განხორციელებაში.'
+                  : 'The BSC is just the start. I will personally help you turn it into an executed strategy.'}
+              </p>
+            </div>
+
+            {session.paid_tier && (
+              <div className="rounded-2xl border border-green-200 bg-green-50 px-5 py-4 text-sm text-green-800 font-medium">
+                {lang === 'ka' ? '✓ შენ უკვე გაქვს პაკეტი' : '✓ You already have a package'}
+              </div>
+            )}
+
+            <div className="grid sm:grid-cols-2 gap-4">
+              {/* Sprint */}
+              <div className="rounded-2xl border-2 border-gray-200 p-6 space-y-4 hover:border-blue-300 transition-colors">
+                <div>
+                  <p className="text-xs font-semibold text-blue-600 uppercase tracking-wide mb-1">BSC Sprint</p>
+                  <p className="text-3xl font-bold text-gray-900">$399</p>
+                  <p className="text-xs text-gray-400">{lang === 'ka' ? 'ერთჯერადი გადახდა' : 'one-time'}</p>
+                </div>
+                <ul className="space-y-2 text-sm text-gray-600">
+                  <li>✓ {lang === 'ka' ? '90 წუთიანი სესია' : '90-min deep session'}</li>
+                  <li>✓ {lang === 'ka' ? 'BSC-ის სრული მიმოხილვა' : 'Full BSC review'}</li>
+                  <li>✓ {lang === 'ka' ? 'წერილობითი სამოქმედო გეგმა' : 'Written action plan'}</li>
+                  <li>✓ {lang === 'ka' ? '30-დღიანი ელ-ფოსტის მხარდაჭერა' : '30-day email follow-up'}</li>
+                </ul>
+                <button
+                  disabled={!!session.paid_tier || upgrading === 'sprint'}
+                  onClick={async () => {
+                    setUpgrading('sprint');
+                    const res = await fetch('/api/stripe/checkout', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ plan: 'sprint' }),
+                    });
+                    const data = await res.json();
+                    if (data.url) window.location.href = data.url;
+                    else setUpgrading(null);
+                  }}
+                  className="w-full py-2.5 rounded-full text-sm font-semibold text-white disabled:opacity-40 transition-opacity"
+                  style={{ background: '#2563eb' }}
+                >
+                  {upgrading === 'sprint' ? '...' : (lang === 'ka' ? 'შეძენა' : 'Buy now')}
+                </button>
+              </div>
+
+              {/* Implementation */}
+              <div className="rounded-2xl border-2 border-blue-500 p-6 space-y-4 relative">
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                  <span className="bg-blue-500 text-white text-xs font-semibold px-3 py-1 rounded-full">
+                    {lang === 'ka' ? 'პოპულარული' : 'Most popular'}
+                  </span>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-blue-600 uppercase tracking-wide mb-1">BSC Implementation</p>
+                  <p className="text-3xl font-bold text-gray-900">$1,200</p>
+                  <p className="text-xs text-gray-400">{lang === 'ka' ? 'ერთჯერადი გადახდა' : 'one-time'}</p>
+                </div>
+                <ul className="space-y-2 text-sm text-gray-600">
+                  <li>✓ {lang === 'ka' ? '3 სესია 6 კვირის განმავლობაში' : '3 sessions over 6 weeks'}</li>
+                  <li>✓ {lang === 'ka' ? 'BSC ერთად ვაშენებთ' : 'BSC built together'}</li>
+                  <li>✓ {lang === 'ka' ? 'სამოქმედო გეგმა + პასუხისმგებლები' : 'Action plan + owners assigned'}</li>
+                  <li>✓ {lang === 'ka' ? 'პროგრესის თვალყური BSC-ში' : 'Progress tracking in BSC'}</li>
+                  <li>✓ {lang === 'ka' ? 'მე-6 კვირის შემოწმება' : 'Week 6 review'}</li>
+                </ul>
+                <button
+                  disabled={!!session.paid_tier || upgrading === 'implementation'}
+                  onClick={async () => {
+                    setUpgrading('implementation');
+                    const res = await fetch('/api/stripe/checkout', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ plan: 'implementation' }),
+                    });
+                    const data = await res.json();
+                    if (data.url) window.location.href = data.url;
+                    else setUpgrading(null);
+                  }}
+                  className="w-full py-2.5 rounded-full text-sm font-semibold text-white disabled:opacity-40 transition-opacity"
+                  style={{ background: '#2563eb' }}
+                >
+                  {upgrading === 'implementation' ? '...' : (lang === 'ka' ? 'შეძენა' : 'Buy now')}
+                </button>
+              </div>
+            </div>
+          </div>
         )}
 
       </main>

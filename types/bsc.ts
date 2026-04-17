@@ -112,6 +112,7 @@ export interface BscSession {
   full_name: string | null;
   email: string | null;
   ai_generations_used: number;
+  paid_tier_plan: string | null;
   nudge1_sent_at: string | null;
   nudge2_sent_at: string | null;
   completion_email_sent_at: string | null;
