@@ -48,7 +48,7 @@ export default function BscBuilder({ initialSession }: { initialSession: FullSes
   type AiObjective = { title: string; kpis: AiKpi[] };
   type AiPreview = Record<string, AiObjective[]>;
 
-  const [upgrading, setUpgrading] = useState<string | null>(null);
+  const CALENDLY = process.env.NEXT_PUBLIC_CALENDLY_URL || 'https://calendly.com/likunakereselidze/30min';
 
   const [aiGenerating, setAiGenerating] = useState(false);
   const [aiPreview, setAiPreview] = useState<AiPreview | null>(null);
@@ -127,36 +127,39 @@ export default function BscBuilder({ initialSession }: { initialSession: FullSes
   async function acceptAiPreview() {
     if (!aiPreview) return;
     setAiAccepting(true);
-    const perspectives = ['financial', 'customer', 'internal', 'learning'] as const;
-    for (const p of perspectives) {
-      const objs: AiObjective[] = aiPreview[p] ?? [];
-      for (const obj of objs) {
-        const objRes = await fetch('/api/objectives', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ session_id: session.id, perspective: p, title: obj.title }),
-        });
-        if (objRes.ok) {
-          const newObj = await objRes.json();
-          for (const kpi of obj.kpis ?? []) {
-            await fetch('/api/kpis', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                objective_id: newObj.id,
-                name: kpi.name,
-                unit: kpi.unit || null,
-                baseline: kpi.baseline || null,
-                target: kpi.target || null,
-              }),
-            });
+    try {
+      const perspectives = ['financial', 'customer', 'internal', 'learning'] as const;
+      for (const p of perspectives) {
+        const objs: AiObjective[] = aiPreview[p] ?? [];
+        for (const obj of objs) {
+          const objRes = await fetch('/api/objectives', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ session_id: session.id, perspective: p, title: obj.title }),
+          });
+          if (objRes.ok) {
+            const newObj = await objRes.json();
+            for (const kpi of obj.kpis ?? []) {
+              await fetch('/api/kpis', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  objective_id: newObj.id,
+                  name: kpi.name,
+                  unit: kpi.unit || null,
+                  baseline: kpi.baseline || null,
+                  target: kpi.target || null,
+                }),
+              });
+            }
           }
         }
       }
+      setAiPreview(null);
+      await refreshSession();
+    } finally {
+      setAiAccepting(false);
     }
-    setAiPreview(null);
-    setAiAccepting(false);
-    await refreshSession();
   }
 
   async function copyLink() {
@@ -554,24 +557,15 @@ export default function BscBuilder({ initialSession }: { initialSession: FullSes
                   <li>✓ {lang === 'ka' ? 'წერილობითი სამოქმედო გეგმა' : 'Written action plan'}</li>
                   <li>✓ {lang === 'ka' ? '30-დღიანი ელ-ფოსტის მხარდაჭერა' : '30-day email follow-up'}</li>
                 </ul>
-                <button
-                  disabled={!!session.paid_tier || upgrading === 'sprint'}
-                  onClick={async () => {
-                    setUpgrading('sprint');
-                    const res = await fetch('/api/stripe/checkout', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ plan: 'sprint' }),
-                    });
-                    const data = await res.json();
-                    if (data.url) window.location.href = data.url;
-                    else setUpgrading(null);
-                  }}
-                  className="w-full py-2.5 rounded-full text-sm font-semibold text-white disabled:opacity-40 transition-opacity"
+                <a
+                  href={`${CALENDLY}?utm_source=bsc&utm_medium=upgrade&utm_campaign=sprint`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block w-full py-2.5 rounded-full text-sm font-semibold text-white text-center transition-opacity hover:opacity-90"
                   style={{ background: '#2563eb' }}
                 >
-                  {upgrading === 'sprint' ? '...' : (lang === 'ka' ? 'შეძენა' : 'Buy now')}
-                </button>
+                  {lang === 'ka' ? 'დაჯავშნე სესია →' : 'Book a call →'}
+                </a>
               </div>
 
               {/* Implementation */}
@@ -593,24 +587,15 @@ export default function BscBuilder({ initialSession }: { initialSession: FullSes
                   <li>✓ {lang === 'ka' ? 'პროგრესის თვალყური BSC-ში' : 'Progress tracking in BSC'}</li>
                   <li>✓ {lang === 'ka' ? 'მე-6 კვირის შემოწმება' : 'Week 6 review'}</li>
                 </ul>
-                <button
-                  disabled={!!session.paid_tier || upgrading === 'implementation'}
-                  onClick={async () => {
-                    setUpgrading('implementation');
-                    const res = await fetch('/api/stripe/checkout', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ plan: 'implementation' }),
-                    });
-                    const data = await res.json();
-                    if (data.url) window.location.href = data.url;
-                    else setUpgrading(null);
-                  }}
-                  className="w-full py-2.5 rounded-full text-sm font-semibold text-white disabled:opacity-40 transition-opacity"
+                <a
+                  href={`${CALENDLY}?utm_source=bsc&utm_medium=upgrade&utm_campaign=implementation`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block w-full py-2.5 rounded-full text-sm font-semibold text-white text-center transition-opacity hover:opacity-90"
                   style={{ background: '#2563eb' }}
                 >
-                  {upgrading === 'implementation' ? '...' : (lang === 'ka' ? 'შეძენა' : 'Buy now')}
-                </button>
+                  {lang === 'ka' ? 'დაჯავშნე სესია →' : 'Book a call →'}
+                </a>
               </div>
             </div>
           </div>

@@ -92,7 +92,8 @@ Additional rules:
     try {
       result = JSON.parse(jsonText);
     } catch {
-      return NextResponse.json({ error: 'Failed to parse AI response', raw: jsonText }, { status: 500 });
+      console.error('Failed to parse AI response', jsonText);
+      return NextResponse.json({ error: 'Failed to parse AI response' }, { status: 500 });
     }
 
     // Validate structure

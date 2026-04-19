@@ -2,7 +2,7 @@ import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import pool from '@/lib/db';
 
-const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'Saleninja12';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;
 
 async function getAllSessions() {
   const res = await pool.query(`

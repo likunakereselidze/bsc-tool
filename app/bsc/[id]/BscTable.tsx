@@ -109,55 +109,61 @@ export default function BscTable({
     if (!e) return;
     const { type, id, field, value } = e;
     const path = type === 'objective' ? 'objectives' : type === 'kpi' ? 'kpis' : 'initiatives';
-    await fetch(`/api/${path}/${id}`, {
+    const res = await fetch(`/api/${path}/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ [field]: value || null }),
     });
     setEditing(null);
-    await onRefresh();
+    if (res.ok) await onRefresh();
   }
 
   async function deleteEntity(type: 'objective' | 'kpi' | 'initiative', id: string) {
     const path = type === 'objective' ? 'objectives' : type === 'kpi' ? 'kpis' : 'initiatives';
-    await fetch(`/api/${path}/${id}`, { method: 'DELETE' });
-    await onRefresh();
+    const res = await fetch(`/api/${path}/${id}`, { method: 'DELETE' });
+    if (res.ok) await onRefresh();
   }
 
   async function saveNewObj(p: Perspective) {
     if (!newObjTitle.trim()) return;
-    await fetch('/api/objectives', {
+    const res = await fetch('/api/objectives', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ session_id: session.id, perspective: p, title: newObjTitle.trim() }),
     });
-    setNewObjTitle('');
-    setAddingObjFor(null);
-    await onRefresh();
+    if (res.ok) {
+      setNewObjTitle('');
+      setAddingObjFor(null);
+      await onRefresh();
+    }
   }
 
   async function saveNewKpi(objId: string) {
     if (!newKpi.name.trim()) return;
-    await fetch('/api/kpis', {
+    const res = await fetch('/api/kpis', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ objective_id: objId, ...newKpi }),
     });
-    setNewKpi({ name: '', unit: '', baseline: '', target: '', frequency: '' });
-    setAddingKpiFor(null);
-    await onRefresh();
+    if (res.ok) {
+      setNewKpi({ name: '', unit: '', baseline: '', target: '', frequency: '' });
+      setAddingKpiFor(null);
+      await onRefresh();
+    }
   }
 
   async function saveNewInit(objId: string) {
     if (!newInit.name.trim()) return;
-    await fetch('/api/initiatives', {
+    const res = await fetch('/api/initiatives', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ objective_id: objId, ...newInit }),
     });
-    setNewInit({ name: '', owner: '', deadline: '', status: 'planned' });
-    setAddingInitFor(null);
-    await onRefresh();
+    if (res.ok) {
+      setNewInit({ name: '', owner: '', deadline: '', status: 'planned' });
+      setAddingInitFor(null);
+      await onRefresh();
+    }
   }
 
   // ---- Render an inline-editable cell (called as a function, not a component) ----
