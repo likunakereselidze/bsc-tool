@@ -68,7 +68,7 @@ export async function GET(req: NextRequest) {
       AND s.full_name IS NOT NULL
       AND s.nudge2_sent_at IS NULL
       AND s.created_at <= NOW() - INTERVAL '7 days'
-    GROUP BY s.id, o.id
+    GROUP BY s.id
     HAVING COUNT(k.id) = 0
   `);
 

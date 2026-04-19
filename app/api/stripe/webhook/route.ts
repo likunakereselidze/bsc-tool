@@ -14,13 +14,13 @@ export async function POST(req: NextRequest) {
 
   let event: Stripe.Event;
 
+  if (!webhookSecret || !sig) {
+    console.error('Webhook secret or signature missing');
+    return NextResponse.json({ error: 'Webhook not configured' }, { status: 400 });
+  }
+
   try {
-    if (webhookSecret && sig) {
-      event = stripe.webhooks.constructEvent(body, sig, webhookSecret);
-    } else {
-      // No webhook secret yet (dev mode) — parse directly
-      event = JSON.parse(body) as Stripe.Event;
-    }
+    event = stripe.webhooks.constructEvent(body, sig, webhookSecret);
   } catch (err) {
     console.error('Webhook signature error', err);
     return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
