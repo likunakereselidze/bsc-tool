@@ -25,6 +25,7 @@ export async function updateSession(
   if (data.export_stage !== undefined) { sets.push(`export_stage = $${i++}`); vals.push(data.export_stage || null); }
   if (sets.length === 0) {
     const res = await pool.query('SELECT * FROM bsc_sessions WHERE id = $1', [id]);
+    if (!res.rows[0]) throw new Error(`Session not found: ${id}`);
     return res.rows[0];
   }
   sets.push(`updated_at = NOW()`);
@@ -32,6 +33,7 @@ export async function updateSession(
     `UPDATE bsc_sessions SET ${sets.join(', ')} WHERE id = $1 RETURNING *`,
     vals
   );
+  if (!res.rows[0]) throw new Error(`Session not found: ${id}`);
   return res.rows[0];
 }
 
@@ -49,6 +51,7 @@ export async function createSession(data: {
     [data.company_name, data.industry ?? null, data.export_stage ?? null, data.language,
      data.full_name ?? null, data.email ?? null]
   );
+  if (!res.rows[0]) throw new Error('Failed to create session');
   return res.rows[0];
 }
 
@@ -115,6 +118,7 @@ export async function createObjective(data: {
      ) RETURNING *`,
     [data.session_id, data.perspective, data.title, data.description ?? null]
   );
+  if (!res.rows[0]) throw new Error('Failed to create objective');
   return res.rows[0];
 }
 
@@ -139,6 +143,7 @@ export async function updateObjective(
       data.y ?? null,
     ]
   );
+  if (!res.rows[0]) throw new Error(`Objective not found: ${id}`);
   return res.rows[0];
 }
 
@@ -163,6 +168,7 @@ export async function createKpi(data: {
     [data.objective_id, data.name, data.unit ?? null, data.baseline ?? null,
      data.target ?? null, data.frequency ?? null]
   );
+  if (!res.rows[0]) throw new Error('Failed to create KPI');
   return res.rows[0];
 }
 
@@ -181,6 +187,7 @@ export async function updateKpi(
     [id, data.name ?? null, data.unit ?? null, data.baseline ?? null,
      data.target ?? null, data.frequency ?? null]
   );
+  if (!res.rows[0]) throw new Error(`KPI not found: ${id}`);
   return res.rows[0];
 }
 
@@ -204,6 +211,7 @@ export async function createInitiative(data: {
     [data.objective_id, data.name, data.owner ?? null,
      data.deadline ?? null, data.status ?? 'planned']
   );
+  if (!res.rows[0]) throw new Error('Failed to create initiative');
   return res.rows[0];
 }
 
@@ -220,6 +228,7 @@ export async function updateInitiative(
      WHERE id = $1 RETURNING *`,
     [id, data.name ?? null, data.owner ?? null, data.deadline ?? null, data.status ?? null]
   );
+  if (!res.rows[0]) throw new Error(`Initiative not found: ${id}`);
   return res.rows[0];
 }
 
@@ -239,6 +248,7 @@ export async function createKpiEntry(data: {
      VALUES ($1, $2, $3, $4) RETURNING *`,
     [data.kpi_id, data.actual_value, data.period ?? null, data.note ?? null]
   );
+  if (!res.rows[0]) throw new Error('Failed to create KPI entry');
   return res.rows[0];
 }
 
