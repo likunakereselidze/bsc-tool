@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef } from 'react';
+import * as dagre from 'dagre';
 import {
   ReactFlow,
   Background,
@@ -58,6 +59,22 @@ function buildEdges(session: FullSession): Edge[] {
     markerEnd: { type: MarkerType.ArrowClosed, color: '#94a3b8', width: 16, height: 16 },
     style: { stroke: '#94a3b8', strokeWidth: 2 },
   }));
+}
+
+const NODE_W = 180;
+const NODE_H = 60;
+
+function getLayoutedElements(nodes: Node[], edges: Edge[]): Node[] {
+  const g = new dagre.graphlib.Graph();
+  g.setGraph({ rankdir: 'TB', ranksep: 80, nodesep: 40 });
+  g.setDefaultEdgeLabel(() => ({}));
+  nodes.forEach((n) => g.setNode(n.id, { width: NODE_W, height: NODE_H }));
+  edges.forEach((e) => g.setEdge(e.source, e.target));
+  dagre.layout(g);
+  return nodes.map((n) => {
+    const pos = g.node(n.id);
+    return { ...n, position: { x: pos.x - NODE_W / 2, y: pos.y - NODE_H / 2 } };
+  });
 }
 
 // Custom node rendered as a small card
@@ -189,6 +206,10 @@ export default function BscStrategyMap({
     [onRefresh, setEdges]
   );
 
+  const applyAutoLayout = useCallback(() => {
+    setNodes((nds) => getLayoutedElements(nds, edges));
+  }, [edges, setNodes]);
+
   // Intercept edge-change events to block keyboard-delete of edges
   const handleEdgesChange = useCallback(
     (changes: Parameters<typeof onEdgesChange>[0]) => {
@@ -271,6 +292,13 @@ export default function BscStrategyMap({
                   ? 'კავშირი: handle-ს ათრიე\nმეორე node-ზე'
                   : 'Connect: drag from node\nhandle to another node'}
               </p>
+              <button
+                onClick={applyAutoLayout}
+                className="mt-2 w-full px-3 py-1.5 rounded-lg text-xs font-medium text-white transition-colors hover:opacity-90"
+                style={{ background: '#2563eb' }}
+              >
+                {lang === 'ka' ? 'ავტო განლაგება' : 'Auto Layout'}
+              </button>
             </div>
           </Panel>
         </ReactFlow>

@@ -1,10 +1,12 @@
 'use client';
 
 import { useState } from 'react';
+import { arrayMove } from '@dnd-kit/sortable';
 import type { FullSession, Perspective, Language, ObjectiveWithDetails, BscKpi, BscInitiative } from '@/types/bsc';
 import { PERSPECTIVES, PERSPECTIVE_LABELS, PERSPECTIVE_DESCRIPTIONS, PERSPECTIVE_ACCENT as ACCENT } from '@/types/bsc';
 import { tr } from '@/lib/i18n';
 import InfoTooltip from './InfoTooltip';
+import { SortableRow, SortableObjectiveGroup } from './SortableObjectiveRows';
 
 // ── Info tooltip texts ───────────────────────────────────────────────────────
 
@@ -100,8 +102,35 @@ export default function BscTable({
   const [newKpi, setNewKpi] = useState({ name: '', unit: '', baseline: '', target: '', frequency: '' });
   const [newInit, setNewInit] = useState({ name: '', owner: '', deadline: '', status: 'planned' });
 
+  const [objOrder, setObjOrder] = useState<Record<Perspective, string[]>>(() => {
+    const init = {} as Record<Perspective, string[]>;
+    for (const p of PERSPECTIVES) {
+      init[p] = session.objectives.filter((o) => o.perspective === p).map((o) => o.id);
+    }
+    return init;
+  });
+
   function getObjs(p: Perspective): ObjectiveWithDetails[] {
-    return session.objectives.filter((o) => o.perspective === p);
+    const order = objOrder[p] ?? [];
+    const all = session.objectives.filter((o) => o.perspective === p);
+    return order
+      .map((id) => all.find((o) => o.id === id))
+      .filter(Boolean) as ObjectiveWithDetails[];
+  }
+
+  async function reorderObjectives(p: Perspective, activeId: string, overId: string) {
+    const oldOrder = objOrder[p];
+    const newOrder = arrayMove(oldOrder, oldOrder.indexOf(activeId), oldOrder.indexOf(overId));
+    setObjOrder((prev) => ({ ...prev, [p]: newOrder }));
+    await Promise.all(
+      newOrder.map((id, idx) =>
+        fetch(`/api/objectives/${id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sort_order: idx }),
+        })
+      )
+    );
   }
 
   async function commitEdit(override?: EditState) {
@@ -245,6 +274,7 @@ export default function BscTable({
       <table className="w-full border-collapse text-sm" style={{ minWidth: 920 }}>
         <thead>
           <tr>
+            <th className={th} style={{ width: 28 }} />
             <th className={th} style={{ width: '22%' }}>{lang === 'ka' ? 'მიზანი' : 'Objective'}</th>
             <th className={th} style={{ width: '13%' }}>
               KPI<InfoTooltip text={KPI_INFO.name[lang]} />
@@ -287,7 +317,7 @@ export default function BscTable({
             rows.push(
               <tr key={`ph-${p}`}>
                 <td
-                  colSpan={11}
+                  colSpan={12}
                   className="px-3 py-2 text-xs font-semibold"
                   style={{
                     background: ACCENT[p] + '15',
@@ -305,7 +335,8 @@ export default function BscTable({
               </tr>
             );
 
-            // Objective rows
+            // Objective rows — wrapped in SortableObjectiveGroup for drag reorder
+            const objRows: React.ReactNode[] = [];
             objs.forEach((obj) => {
               const kpis = obj.kpis;
               const inits = obj.initiatives;
@@ -317,15 +348,13 @@ export default function BscTable({
                 const isFirst = i === 0;
                 const isLast = i === rowCount - 1;
 
-                rows.push(
-                  <tr
-                    key={`${obj.id}-${i}`}
-                    className="group hover:bg-blue-50/20"
-                    style={{
-                      borderLeft: `3px solid ${isFirst ? ACCENT[p] : ACCENT[p] + '40'}`,
-                      borderBottom: isLast ? `2px solid #f3f4f6` : undefined,
-                    }}
-                  >
+                const rowStyle = {
+                  borderLeft: `3px solid ${isFirst ? ACCENT[p] : ACCENT[p] + '40'}`,
+                  borderBottom: isLast ? `2px solid #f3f4f6` : undefined,
+                };
+
+                const rowCells = (
+                  <>
                     {/* Objective column */}
                     <td className={td} style={isFirst ? {} : { visibility: 'hidden' }}>
                       {isFirst && (
@@ -381,13 +410,38 @@ export default function BscTable({
                         )}
                       </div>
                     </td>
-                  </tr>
+                  </>
                 );
+
+                if (isFirst) {
+                  objRows.push(
+                    <SortableRow
+                      key={`${obj.id}-0`}
+                      id={obj.id}
+                      trStyle={rowStyle}
+                      trClassName="group hover:bg-blue-50/20"
+                    >
+                      {rowCells}
+                    </SortableRow>
+                  );
+                } else {
+                  objRows.push(
+                    <tr
+                      key={`${obj.id}-${i}`}
+                      className="group hover:bg-blue-50/20"
+                      style={rowStyle}
+                    >
+                      <td className={td} />
+                      {rowCells}
+                    </tr>
+                  );
+                }
               }
 
               // Add KPI / Add Initiative inline row
-              rows.push(
+              objRows.push(
                 <tr key={`add-row-${obj.id}`} style={{ borderLeft: '3px solid transparent' }}>
+                  <td className="px-2 py-1 border-b border-gray-50" />
                   <td className="px-2 py-1 border-b border-gray-50" />
 
                   {/* Add KPI section */}
@@ -484,11 +538,22 @@ export default function BscTable({
               );
             });
 
+            // Push all objective rows (including add-KPI/initiative rows) wrapped in SortableObjectiveGroup
+            rows.push(
+              <SortableObjectiveGroup
+                key={`sort-group-${p}`}
+                objectiveIds={objOrder[p]}
+                onDragEnd={(activeId, overId) => reorderObjectives(p, activeId, overId)}
+              >
+                {objRows}
+              </SortableObjectiveGroup>
+            );
+
             // Add objective row
             if (addingObjFor === p) {
               rows.push(
                 <tr key={`new-obj-${p}`} style={{ borderLeft: `3px solid ${ACCENT[p]}` }}>
-                  <td colSpan={11} className="px-3 py-2 border-b border-gray-100">
+                  <td colSpan={12} className="px-3 py-2 border-b border-gray-100">
                     <div className="flex gap-2 items-center">
                       <input
                         autoFocus
@@ -517,7 +582,7 @@ export default function BscTable({
             } else {
               rows.push(
                 <tr key={`add-obj-${p}`} style={{ borderLeft: '3px solid transparent' }}>
-                  <td colSpan={11} className="px-3 py-2.5 border-b border-gray-100">
+                  <td colSpan={12} className="px-3 py-2.5 border-b border-gray-100">
                     {objs.length === 0 && (
                       <p className="text-xs italic mb-2" style={{ color: ACCENT[p] + '99' }}>
                         {OBJECTIVE_EXAMPLES[p][lang]}

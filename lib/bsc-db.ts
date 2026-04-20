@@ -124,14 +124,15 @@ export async function createObjective(data: {
 
 export async function updateObjective(
   id: string,
-  data: { title?: string; description?: string; x?: number | null; y?: number | null }
+  data: { title?: string; description?: string; x?: number | null; y?: number | null; sort_order?: number }
 ): Promise<BscObjective> {
   const res = await pool.query(
     `UPDATE bsc_objectives SET
        title = COALESCE($2, title),
        description = COALESCE($3, description),
        x = CASE WHEN $4::boolean THEN $5::float ELSE x END,
-       y = CASE WHEN $6::boolean THEN $7::float ELSE y END
+       y = CASE WHEN $6::boolean THEN $7::float ELSE y END,
+       sort_order = CASE WHEN $8::boolean THEN $9::int ELSE sort_order END
      WHERE id = $1 RETURNING *`,
     [
       id,
@@ -141,6 +142,8 @@ export async function updateObjective(
       data.x ?? null,
       'y' in data,
       data.y ?? null,
+      'sort_order' in data,
+      data.sort_order ?? null,
     ]
   );
   if (!res.rows[0]) throw new Error(`Objective not found: ${id}`);

@@ -93,33 +93,52 @@ export default function BscBuilder({ initialSession }: { initialSession: FullSes
     }
     setAiGenerating(true);
     setAiError(null);
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 30000);
     try {
       const res = await fetch('/api/ai/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ session_id: session.id }),
-        signal: controller.signal,
       });
-      const data = await res.json();
+
       if (!res.ok) {
+        // Error responses are still JSON
+        const data = await res.json();
         if (data.error === 'limit_reached') {
           setAiLimitReached(true);
         } else {
           setAiError(data.error ?? 'AI generation failed');
         }
-      } else {
-        setAiPreview(data);
+        return;
       }
+
+      // Read the streaming text response
+      const reader = res.body!.getReader();
+      const decoder = new TextDecoder();
+      let fullText = '';
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        fullText += decoder.decode(value, { stream: true });
+      }
+
+      // Strip markdown fences if present, then parse JSON
+      const jsonText = fullText
+        .trim()
+        .replace(/^```(?:json)?\s*/i, '')
+        .replace(/\s*```$/i, '')
+        .trim();
+
+      let result: AiPreview;
+      try {
+        result = JSON.parse(jsonText);
+      } catch {
+        setAiError(lang === 'ka' ? 'AI-ს პასუხი ვერ დამუშავდა' : 'Failed to parse AI response');
+        return;
+      }
+      setAiPreview(result);
     } catch (err) {
-      if (err instanceof Error && err.name === 'AbortError') {
-        setAiError(lang === 'ka' ? 'AI-ს მოთხოვნა დრო გადიოდა (30წ)' : 'AI request timed out (30s)');
-      } else {
-        setAiError('Network error');
-      }
+      setAiError(err instanceof Error ? err.message : 'Network error');
     } finally {
-      clearTimeout(timeout);
       setAiGenerating(false);
     }
   }

@@ -31,6 +31,18 @@ export async function POST(req: NextRequest) {
     const session = await getSession(session_id);
     if (!session) return NextResponse.json({ error: 'Session not found' }, { status: 404 });
 
+    // Check+increment limit atomically BEFORE starting the AI call
+    const limitRes = await pool.query(
+      `UPDATE bsc_sessions
+       SET ai_generations_used = ai_generations_used + 1
+       WHERE id = $1 AND (paid_tier = true OR ai_generations_used < $2)
+       RETURNING id`,
+      [session_id, FREE_TIER_LIMIT]
+    );
+    if ((limitRes.rowCount ?? 0) === 0) {
+      return NextResponse.json({ error: 'limit_reached' }, { status: 403 });
+    }
+
     const { company_name, industry, export_stage, language } = session;
     const stageName = export_stage ? (STAGE_LABELS[export_stage] ?? export_stage) : 'unknown stage';
     const langInstr = language === 'ka'
@@ -73,50 +85,33 @@ Additional rules:
 - Use industry-specific vocabulary
 - All four perspectives MUST have objectives`;
 
-    const message = await client.messages.create({
+    const stream = client.messages.stream({
       model: 'claude-sonnet-4-6',
       max_tokens: 4096,
       messages: [{ role: 'user', content: prompt }],
     });
 
-    const content = message.content[0];
-    if (content.type !== 'text') {
-      return NextResponse.json({ error: 'Unexpected response type' }, { status: 500 });
-    }
+    const readable = new ReadableStream({
+      async start(controller) {
+        const encoder = new TextEncoder();
+        try {
+          for await (const event of stream) {
+            if (
+              event.type === 'content_block_delta' &&
+              event.delta.type === 'text_delta'
+            ) {
+              controller.enqueue(encoder.encode(event.delta.text));
+            }
+          }
+        } finally {
+          controller.close();
+        }
+      },
+    });
 
-    // Strip any markdown code fences if present
-    let jsonText = content.text.trim();
-    jsonText = jsonText.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/i, '').trim();
-
-    let result;
-    try {
-      result = JSON.parse(jsonText);
-    } catch {
-      console.error('Failed to parse AI response', jsonText);
-      return NextResponse.json({ error: 'Failed to parse AI response' }, { status: 500 });
-    }
-
-    // Validate structure
-    const perspectives = ['financial', 'customer', 'internal', 'learning'];
-    for (const p of perspectives) {
-      if (!Array.isArray(result[p])) {
-        return NextResponse.json({ error: `Invalid response: missing ${p}` }, { status: 500 });
-      }
-    }
-
-    // Atomically increment counter, enforcing free-tier limit
-    const limitRes = await pool.query(
-      `UPDATE bsc_sessions
-       SET ai_generations_used = ai_generations_used + 1
-       WHERE id = $1 AND (paid_tier = true OR ai_generations_used < $2)
-       RETURNING id`,
-      [session_id, FREE_TIER_LIMIT]
-    );
-    if ((limitRes.rowCount ?? 0) === 0) {
-      return NextResponse.json({ error: 'limit_reached' }, { status: 403 });
-    }
-
-    return NextResponse.json(result);
+    return new Response(readable, {
+      headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+    });
   } catch (err) {
     console.error('POST /api/ai/generate', err);
     return NextResponse.json({ error: 'Server error' }, { status: 500 });

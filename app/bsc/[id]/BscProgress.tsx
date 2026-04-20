@@ -1,6 +1,10 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import {
+  LineChart, Line, XAxis, YAxis, Tooltip,
+  ResponsiveContainer, ReferenceLine,
+} from 'recharts';
 import type { FullSession, Perspective, Language, KpiEntry, BscKpi, ObjectiveWithDetails } from '@/types/bsc';
 import { PERSPECTIVES, PERSPECTIVE_LABELS, PERSPECTIVE_DESCRIPTIONS, PERSPECTIVE_ACCENT as ACCENT } from '@/types/bsc';
 
@@ -17,6 +21,17 @@ function parseNumber(s: string | null): number | null {
   if (!s) return null;
   const n = parseFloat(s.replace(/[^0-9.\-]/g, ''));
   return isNaN(n) ? null : n;
+}
+
+function chartData(kpi: BscKpi, history: KpiEntry[]): { label: string; value: number }[] {
+  void kpi;
+  return [...history]
+    .reverse()
+    .flatMap((e, i) => {
+      const v = parseNumber(e.actual_value);
+      if (v === null) return [];
+      return [{ label: e.period ?? `#${i + 1}`, value: v }];
+    });
 }
 
 function progressPercent(baseline: string | null, target: string | null, actual: string | null): number | null {
@@ -306,7 +321,63 @@ export default function BscProgress({
 
                               {/* History */}
                               {isExpanded && history.length > 0 && (
-                                <div className="pt-1 border-t border-gray-100 space-y-1">
+                                <div className="pt-1 border-t border-gray-100 space-y-2">
+                                  {/* Trend chart — shown when 2+ data points */}
+                                  {history.length >= 2 && (
+                                    <div style={{ height: 100 }}>
+                                      <ResponsiveContainer width="100%" height="100%">
+                                        <LineChart
+                                          data={chartData(kpi, history)}
+                                          margin={{ top: 4, right: 8, bottom: 0, left: -20 }}
+                                        >
+                                          <XAxis
+                                            dataKey="label"
+                                            tick={{ fontSize: 9, fill: '#9ca3af' }}
+                                            tickLine={false}
+                                            axisLine={false}
+                                          />
+                                          <YAxis
+                                            tick={{ fontSize: 9, fill: '#9ca3af' }}
+                                            tickLine={false}
+                                            axisLine={false}
+                                            width={36}
+                                          />
+                                          <Tooltip
+                                            contentStyle={{
+                                              fontSize: 11,
+                                              borderRadius: 8,
+                                              border: '1px solid #e5e7eb',
+                                              padding: '4px 8px',
+                                            }}
+                                            labelStyle={{ color: '#6b7280' }}
+                                            formatter={(v: unknown) => [`${v}`, kpi.unit || 'value']}
+                                          />
+                                          {kpi.target && parseNumber(kpi.target) !== null && (
+                                            <ReferenceLine
+                                              y={parseNumber(kpi.target)!}
+                                              stroke={ACCENT[p]}
+                                              strokeDasharray="3 3"
+                                              label={{
+                                                value: lang === 'ka' ? 'სამ.' : 'Target',
+                                                fontSize: 9,
+                                                fill: ACCENT[p],
+                                              }}
+                                            />
+                                          )}
+                                          <Line
+                                            type="monotone"
+                                            dataKey="value"
+                                            stroke={ACCENT[p]}
+                                            strokeWidth={2}
+                                            dot={{ r: 3, fill: ACCENT[p] }}
+                                            activeDot={{ r: 5 }}
+                                            isAnimationActive={false}
+                                          />
+                                        </LineChart>
+                                      </ResponsiveContainer>
+                                    </div>
+                                  )}
+                                  <div className="space-y-1">
                                   {history.map((entry) => (
                                     <div
                                       key={entry.id}
@@ -326,6 +397,7 @@ export default function BscProgress({
                                       </button>
                                     </div>
                                   ))}
+                                  </div>
                                 </div>
                               )}
                             </div>
